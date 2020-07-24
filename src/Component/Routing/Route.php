@@ -6,7 +6,7 @@ namespace Jan\Component\Routing;
  * Class Route
  * @package Jan\Component\Routing
 */
-class Route
+class Route implements \ArrayAccess
 {
 
      /**
@@ -19,6 +19,14 @@ class Route
       * @var string
      */
      private $path;
+
+
+
+     /**
+      * @var array
+     */
+     private $regex = [];
+
 
 
      /**
@@ -40,16 +48,18 @@ class Route
      private $matches = [];
 
 
-     /**
-      * @var array
-     */
-     private $namedRoutes = [];
-
 
      /**
       * @var array
      */
      private $middleware = [];
+
+
+
+     /**
+      * @var array
+     */
+     private $options = [];
 
 
 
@@ -85,6 +95,15 @@ class Route
 
 
     /**
+     * @return string
+     */
+    public function getPattern()
+    {
+        return '#^' . $this->path . '$#';
+    }
+
+
+    /**
      * @param string $path
      * @return Route
     */
@@ -93,6 +112,32 @@ class Route
         $this->path = $path;
         return $this;
     }
+
+
+
+    /**
+     * @return array
+    */
+    public function getRegex(): array
+    {
+        return $this->regex;
+    }
+
+
+
+    /**
+     * @param $name
+     * @param $expression
+     * @return Route
+    */
+    public function setRegex($name, $expression): Route
+    {
+        $this->regex[$name] = $expression;
+
+        return $this;
+    }
+
+
 
 
     /**
@@ -133,9 +178,6 @@ class Route
     public function setName(string $name): Route
     {
         $this->name = $name;
-
-        $this->namedRoutes[$name] = $this->path;
-
         return $this;
     }
 
@@ -161,32 +203,56 @@ class Route
 
 
     /**
-     * @return string
-    */
-    public function getPattern()
-    {
-        return '#^' . $this->path . '$#';
-    }
-
-    /**
      * @return array
      */
     public function getMiddleware(): array
     {
-        return $this->middleware;
+        return $this->middleware[$this->path] ?? [];
+    }
+
+
+
+    /**
+     * @param array $middleware
+     * @return Route
+    */
+    public function setMiddleware(array $middleware): Route
+    {
+        $this->middleware = $middleware;
+        return $this;
+    }
+
+
+
+    /**
+     * @return array
+     */
+    public function getOptions(): array
+    {
+        return $this->options;
+    }
+
+
+
+    /**
+     * @param array $options
+     * @return Route
+    */
+    public function setOptions(array $options): Route
+    {
+        $this->options = $options;
+        return $this;
     }
 
 
     /**
-     * @param string $middleware
-     * @return Route
+     * @param $index
+     * @return mixed|null
     */
-    public function setMiddleware(string $middleware): Route
+    public function getOption($index)
     {
-        $this->middleware[$this->path] = $middleware;
-        return $this;
+        return $this->options[$index] ?? null;
     }
-
 
 
 
@@ -226,6 +292,86 @@ class Route
     */
     public function match($requestMethod, $requestUri)
     {
-        return $this->isMatchingMethod($requestMethod) && $this->isMatchingPath($requestUri);
+        return $this->isMatchingMethod($requestMethod)
+               && $this->isMatchingPath($requestUri);
+    }
+
+
+    /**
+     * @param $name
+     * @param $value
+    */
+    public function set($name, $value)
+    {
+        if($this->has($name))
+        {
+             $this->{$name} = $value;
+        }
+    }
+
+
+
+    /**
+     * @param $name
+     * @return bool
+    */
+    public function has($name)
+    {
+        return property_exists($this, $name);
+    }
+
+
+    /**
+     * @param $name
+     * @return
+    */
+    public function get($name)
+    {
+         if($this->has($name))
+         {
+             return $this->{$name};
+         }
+    }
+
+
+    /**
+     * @param mixed $offset
+     * @return bool
+    */
+    public function offsetExists($offset)
+    {
+        return $this->has($offset);
+    }
+
+
+    /**
+     * @param mixed $offset
+     * @return mixed|void
+    */
+    public function offsetGet($offset)
+    {
+        return $this->get($offset);
+    }
+
+
+    /**
+     * @param mixed $offset
+     * @param mixed $value
+    */
+    public function offsetSet($offset, $value)
+    {
+        $this->set($offset, $value);
+    }
+
+
+    /**
+     * @param mixed $offset
+    */
+    public function offsetUnset($offset)
+    {
+        if($this->has($offset))
+        {
+            unset($this->{$offset});
+        }
     }
 }
