@@ -1,0 +1,19 @@
+{
+    "name": "jeandev/jeandev",
+    "description": "Building framework components",
+    "authors": [
+        {
+            "name": "Yao Jean-Claude",
+            "email": "jeandev84@yahoo.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Jan\\": "src",
+            "App\\": "app"
+        }
+    },
+    "require": {
+        "symfony/var-dumper": "^5.1"
+    }
+}
