@@ -56,7 +56,14 @@ $router->map('GET', '/about', 'HomeController@about', 'about')
 
 $router->map('GET|POST', '/contact', 'HomeController@contact', 'contact');
 
+$router->map('GET', '/post/{slug}/{id}', 'HomeController@contact', 'post.show')
+->where([
+  'slug' => '(\w+)',
+   'id'   => '(\d+)'
+]);
 
+
+dump($router->getNamedRoutes());
 dump($router->getRoutes());
 
 

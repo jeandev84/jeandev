@@ -3,6 +3,7 @@ namespace Jan\Component\Routing;
 
 
 use Closure;
+use Jan\Component\Routing\Exception\RouterException;
 use RuntimeException;
 
 
@@ -13,6 +14,11 @@ use RuntimeException;
 */
 class Router
 {
+
+      const OPTION_PARAM_PREFIX     = 'prefix';
+      const OPTION_PARAM_NAMESPACE  = 'namespace';
+      const OPTION_PARAM_MIDDLEWARE = 'middleware';
+
 
       /**
        * @var string
@@ -46,15 +52,6 @@ class Router
 
 
       /**
-        * Set pattern
-        *
-        * @var array
-      */
-      protected $patterns = [];
-
-
-
-      /**
        * Route options params
        *
        * @var array
@@ -79,6 +76,54 @@ class Router
 
 
 
+    /**
+     * @return array
+     */
+    public function getRoutes()
+    {
+        return $this->routes;
+    }
+
+
+
+    /**
+     * @return Route
+    */
+    public function getRoute()
+    {
+        if(! $this->route instanceof Route)
+        {
+             throw new RuntimeException('No route instantiated!');
+        }
+
+        return $this->route;
+    }
+
+
+    /**
+     * Get named routes
+     *
+     * @return array
+    */
+    public function getNamedRoutes()
+    {
+        return $this->namedRoutes;
+    }
+
+
+    /**
+     * @param Route $route
+     * @return Router
+    */
+    public function add(Route $route)
+    {
+        $this->routes[] = $this->route = $route;
+
+        return $this;
+    }
+
+
+
       /**
        * Set base url
        *
@@ -87,7 +132,7 @@ class Router
       */
       public function setBaseUrl(string $baseUrl)
       {
-           $this->baseUrl = trim($baseUrl, '/');
+           $this->baseUrl = rtrim($baseUrl, '/');
 
            return $this;
       }
@@ -125,29 +170,125 @@ class Router
       }
 
 
-      /**
-       * Map route params
-       *
-       * @param $methods
-       * @param $path
-       * @param $target
-       * @param string $name
-       * @return Router
+     /**
+      * @param $prefix
+      * @param Closure $callback
+     */
+     public function prefix($prefix, Closure $callback)
+     {
+        $this->group(compact('prefix'), $callback);
+     }
+
+
+    /**
+     * @param $namespace
+     * @param Closure $callback
+    */
+    public function namespace($namespace, Closure $callback)
+    {
+        $this->group(compact('namespace'), $callback);
+    }
+
+
+
+    /**
+     * @param string $path
+     * @param $target
+     * @param string|null $name
+     * @return $this
+     * @throws RouterException
+    */
+    public function get(string $path, $target, string $name = null)
+    {
+        return $this->map(['GET'], $path, $target, $name);
+    }
+
+
+    /**
+     * @param string $path
+     * @param $target
+     * @param string|null $name
+     * @return $this
+     * @throws RouterException
+    */
+    public function post(string $path, $target, string $name = null)
+    {
+        return $this->map(['POST'], $path, $target, $name);
+    }
+
+
+    /**
+     * @param string $path
+     * @param $target
+     * @param string|null $name
+     * @return $this
+     * @throws RouterException
+    */
+    public function put(string $path, $target, string $name = null)
+    {
+        return $this->map(['PUT'], $path, $target, $name);
+    }
+
+
+    /**
+     * @param string $path
+     * @param $target
+     * @param string|null $name
+     * @return $this
+     * @throws RouterException
+    */
+    public function delete(string $path, $target, string $name = null)
+    {
+        return $this->map(['DELETE'], $path, $target, $name);
+    }
+
+
+     /**
+      * Map route params
+      *
+      * @param $methods
+      * @param $path
+      * @param $target
+      * @param string $name
+      * @return Router
       */
       public function map($methods, $path, $target, $name = '')
       {
-            $route = new Route();
-            $route->setMethods($this->resolveMethods($methods));
-            $route->setPath($this->resolvePath($path));
-            $route->setTarget($this->resolveTarget($target));
-            $route->setName($name);
-            $route->setOptions($this->options);
+           $route = new Route(
+               $this->resolveMethods($methods),
+               $this->resolvePath($path),
+               $this->resolveTarget($target),
+               $this->resolveName($name, $this->resolvePath($path)),
+               $this->options
+           );
 
-            $this->add($route);
+           $route->setMiddleware(
+               (array) $this->getOption(self::OPTION_PARAM_MIDDLEWARE)
+           );
 
-
-            return $this;
+           return $this->add($route);
       }
+
+
+
+     /**
+      * @param string $requestMethod
+      * @param string $requestUri
+      * @return Route|false
+     */
+     public function match(string $requestMethod, string $requestUri)
+     {
+          foreach ($this->routes as $route)
+          {
+             if($route->match($requestMethod, $requestUri))
+             {
+                return $route;
+             }
+          }
+
+          return false;
+      }
+
 
 
       /**
@@ -162,100 +303,36 @@ class Router
       }
 
 
-      /**
-       * @param string $name
-       * @return Router
-      */
-      public function name(string $name)
-      {
-           $this->route->setName($name);
+       /**
+         * @param string $name
+         * @return Router
+       */
+       public function name(string $name)
+       {
+           $this->route->setName(
+               $this->resolveName($name, $this->route->getPath())
+           );
 
            return $this;
-      }
+       }
 
-
+    
       /**
-       * @param string $requestMethod
-       * @param string $requestUri
-       * @return Route|false
-      */
-      public function match(string $requestMethod, string $requestUri)
-      {
-           foreach ($this->routes as $route)
-           {
-                if($route->match($requestMethod, $requestUri))
-                {
-                     return $route;
-                }
-           }
+        * Set regular expression requirement on the route
+        * @param $name
+        * @param null $expression
+        *
+        * @return Router
+       */
+       public function where($name, $expression = null)
+       {
+          foreach ($this->parseWhere($name, $expression) as $name => $expression)
+          {
+              $this->route->setRegex($name, $expression);
+          }
 
-           return false;
-      }
-
-
-      /**
-        * @return array
-      */
-      public function getRoutes()
-      {
-          return $this->routes;
-      }
-
-
-      /**
-       * @return Route
-      */
-      public function getRoute()
-      {
-          return $this->route;
-      }
-
-
-     /**
-      * @param Route $route
-      * @return Router
-     */
-     protected function add(Route $route)
-     {
-        $this->routes[] = $this->route = $route;
-
-        return $this;
-     }
-
-
-
-    /**
-     * @param $methods
-     * @return array
-    */
-    protected function resolveMethods($methods)
-    {
-        if(is_string($methods))
-        {
-            $methods = explode('|', $methods);
-        }
-
-        return (array) $methods;
-    }
-
-
-
-    /**
-     * Set regular expression requirement on the route
-     * @param $name
-     * @param null $expression
-     *
-     * @return Router
-     */
-    public function where($name, $expression = null)
-    {
-        foreach ($this->parseWhere($name, $expression) as $name => $expression)
-        {
-            $this->patterns[$name] = $expression;
-        }
-
-        return $this;
-    }
+          return $this;
+       }
 
 
     /**
@@ -268,36 +345,6 @@ class Router
     private function parseWhere($name, $expression)
     {
         return \is_array($name) ? $name : [$name => $expression];
-    }
-
-    /**
-     * @param $path
-     * @return string
-    */
-    private function resolvePath($path)
-    {
-        if($prefix = $this->getOption('prefix'))
-        {
-            $path = rtrim($prefix, '/') . '/'. ltrim($path, '/');
-        }
-
-        return $path;
-    }
-
-
-
-    /**
-     * @param $target
-     * @return string
-    */
-    private function resolveTarget($target)
-    {
-        if($namespace = $this->getOption('namespace'))
-        {
-            $target = rtrim($namespace, '\\') .'\\' . $target;
-        }
-
-        return $target;
     }
 
 
@@ -327,5 +374,74 @@ class Router
     private function getOption($key)
     {
         return $this->options[$key] ?? null;
+    }
+
+
+
+    /**
+     * @param $methods
+     * @return array
+     */
+    private function resolveMethods($methods)
+    {
+        if(is_string($methods))
+        {
+            $methods = explode('|', $methods);
+        }
+
+        return (array) $methods;
+    }
+
+
+    /**
+     * @param $path
+     * @return string
+     */
+    private function resolvePath(string $path)
+    {
+        if($prefix = $this->getOption(self::OPTION_PARAM_PREFIX))
+        {
+            $path = rtrim($prefix, '/') . '/'. ltrim($path, '/');
+        }
+
+        return $path;
+    }
+
+
+    /**
+     * @param $target
+     * @return string
+    */
+    private function resolveTarget($target)
+    {
+        if($namespace = $this->getOption(self::OPTION_PARAM_NAMESPACE))
+        {
+            $target = rtrim($namespace, '\\') .'\\' . $target;
+        }
+
+        return $target;
+    }
+
+
+    /**
+     * @param $name
+     * @param $path
+     * @return mixed
+    */
+    private function resolveName($name, $path)
+    {
+        if($name)
+        {
+            if(isset($this->namedRoutes[$name]))
+            {
+                throw new RuntimeException(
+                    sprintf('This route name (%s) already taken!', $name)
+                );
+            }
+
+            $this->namedRoutes[$name] = $path;
+        }
+
+        return $name;
     }
 }

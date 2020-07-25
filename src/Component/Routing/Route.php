@@ -2,12 +2,22 @@
 namespace Jan\Component\Routing;
 
 
+use RuntimeException;
+
+
+
 /**
  * Class Route
  * @package Jan\Component\Routing
 */
 class Route implements \ArrayAccess
 {
+
+     const REGEX_EXPRESSION_DEFAULT = [
+         'id'   => '[0-9]+',
+         'slug' => '[a-z\-0-9]+'
+     ];
+
 
      /**
       * @var array
@@ -62,7 +72,25 @@ class Route implements \ArrayAccess
      private $options = [];
 
 
+     /**
+      * Route constructor.
+      *
+      * @param $methods
+      * @param $path
+      * @param $target
+      * @param $name
+      * @param $options
+     */
+     public function __construct($methods = null, $path = null, $target = null, $name = null, $options = null)
+     {
+           $this->setMethods($methods);
+           $this->setPath($path);
+           $this->setTarget($target);
+           $this->setName($name);
+           $this->setOptions($options);
+     }
 
+     
     /**
      * @return array
     */
@@ -74,7 +102,7 @@ class Route implements \ArrayAccess
 
 
     /**
-     * @param array $methods
+     * @param $methods
      * @return Route
     */
     public function setMethods(array $methods): Route
@@ -95,22 +123,24 @@ class Route implements \ArrayAccess
 
 
     /**
-     * @return string
-     */
-    public function getPattern()
-    {
-        return '#^' . $this->path . '$#';
-    }
-
-
-    /**
      * @param string $path
      * @return Route
     */
     public function setPath(string $path): Route
     {
-        $this->path = $path;
+        $this->path = trim($path, '/');
+
         return $this;
+    }
+
+
+
+    /**
+     * @return string
+    */
+    public function getPattern()
+    {
+        return '#^' . $this->getPath() . '$#';
     }
 
 
@@ -120,7 +150,7 @@ class Route implements \ArrayAccess
     */
     public function getRegex(): array
     {
-        return $this->regex;
+         return array_merge(self::REGEX_EXPRESSION_DEFAULT, $this->regex);
     }
 
 
@@ -156,6 +186,7 @@ class Route implements \ArrayAccess
     public function setTarget($target)
     {
         $this->target = $target;
+
         return $this;
     }
 
@@ -178,6 +209,7 @@ class Route implements \ArrayAccess
     public function setName(string $name): Route
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -219,6 +251,14 @@ class Route implements \ArrayAccess
     public function setMiddleware(array $middleware): Route
     {
         $this->middleware = $middleware;
+
+        /*
+        if($middleware = $this->getOption(self::OPTION_PARAM_MIDDLEWARE))
+        {
+            $this->middleware = $middleware;
+        }
+        */
+
         return $this;
     }
 
@@ -246,17 +286,6 @@ class Route implements \ArrayAccess
 
 
     /**
-     * @param $index
-     * @return mixed|null
-    */
-    public function getOption($index)
-    {
-        return $this->options[$index] ?? null;
-    }
-
-
-
-    /**
      * @param string $requestMethod
      * @return bool
     */
@@ -274,7 +303,7 @@ class Route implements \ArrayAccess
     {
         $matches = [];
 
-        if(preg_match($this->getPattern(), $requestUri, $matches))
+        if(preg_match($this->getPattern(), trim($requestUri, '/'), $matches))
         {
             $this->setMatches($matches);
 
@@ -295,6 +324,25 @@ class Route implements \ArrayAccess
         return $this->isMatchingMethod($requestMethod)
                && $this->isMatchingPath($requestUri);
     }
+
+
+    /**
+     * @param $name
+     * @param array $params
+     * @return string
+    */
+    public function generate($name, $params = [])
+    {
+         $path = '';
+
+         if($this->name === $name)
+         {
+              $path = $this->getPath();
+         }
+
+         return $path;
+    }
+
 
 
     /**
