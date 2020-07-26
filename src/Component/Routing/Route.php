@@ -134,7 +134,7 @@ class Route implements \ArrayAccess
     */
     public function setPath(string $path): Route
     {
-        $this->path = trim($path, '/');
+        $this->path = $path;
 
         return $this;
     }
@@ -146,7 +146,7 @@ class Route implements \ArrayAccess
     */
     public function getPattern()
     {
-        return '#^' . $this->getPath() . '$#';
+        return '#^' . trim($this->getPath(), '/') . '$#';
     }
 
 

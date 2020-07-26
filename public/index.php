@@ -9,6 +9,7 @@ require_once __DIR__.'/../vendor/autoload.php';
 
 $router = new Router();
 
+/*
 $options = [
   'prefix' => 'admin',
   'namespace' => 'Admin'
@@ -35,14 +36,15 @@ $router->group($options, function () use ($router){
 
 });
 
+*/
 
-/*
+
 $router->map('GET', '/', 'HomeController@index')
-    ->name('home')
-    ->middleware([
+       ->name('home')
+       ->middleware([
         \App\Middlewares\Authenticated::class,
         \App\Middlewares\CsrfToken::class
-    ]);
+      ]);
 
 $router->map('GET', '/about', 'HomeController@about', 'about')
     ->middleware([
@@ -51,6 +53,9 @@ $router->map('GET', '/about', 'HomeController@about', 'about')
 
 
 $router->map('GET|POST', '/contact', 'HomeController@contact', 'contact');
+
+
+/*
 $router->map('GET', '/post/{slug}/{id}', 'HomeController@contact', 'post.show')
 ->where([
   'slug' => '(\w+)',
