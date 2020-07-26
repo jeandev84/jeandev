@@ -243,6 +243,30 @@ class Router
     }
 
 
+    /**
+     * Add new package or resources of routes
+     * Using for system CRUD or api
+     *
+     * @param string $path
+     * @param string $controller
+     * @throws RouterException
+     *
+     * Example (path => 'posts/', 'controller' => 'PostController')
+    */
+    public function resource(string $path, string $controller)
+    {
+        $name = str_replace('/', '.', trim($path, '/'));
+
+        $this->get($path.'/', $controller.'@index', $name .'.list');
+        $this->get($path.'/{id}', $controller.'@show', $name.'.show');
+        $this->get($path.'/new', $controller.'@new', $name. '.new');
+        $this->post($path.'/store', $controller.'@store', $name.'.store');
+        $this->map('GET|POST', $path.'/{id}/edit', $controller.'@edit', $name.'.edit');
+        $this->delete($path.'/{id}/delete', $controller.'@delete', $name.'.delete');
+        $this->get($path.'/{id}/restore', $controller.'@restore', $name.'.restore');
+    }
+
+
      /**
       * Map route params
       *
@@ -252,14 +276,17 @@ class Router
       * @param string $name
       * @return Router
       */
-      public function map($methods, $path, $target, $name = '')
+      public function map($methods, string $path, $target, string $name = null)
       {
            $route = new Route(
                $this->resolveMethods($methods),
                $this->resolvePath($path),
                $this->resolveTarget($target),
-               $this->resolveName($name, $this->resolvePath($path)),
                $this->options
+           );
+
+           $route->setName(
+               $this->resolveName($name, $route)
            );
 
            $route->setMiddleware(
@@ -310,7 +337,7 @@ class Router
        public function name(string $name)
        {
            $this->route->setName(
-               $this->resolveName($name, $this->route->getPath())
+               $this->resolveName($name, $this->route)
            );
 
            return $this;
@@ -414,10 +441,10 @@ class Router
 
         /**
          * @param $name
-         * @param $path
+         * @param Route $route
          * @return mixed
         */
-        private function resolveName($name, $path)
+        private function resolveName($name, Route $route)
         {
             if($name)
             {
@@ -428,10 +455,10 @@ class Router
                     );
                 }
 
-                $this->namedRoutes[$name] = $path;
+                $this->namedRoutes[$name] = $route->getPath();
             }
 
-            return $name;
+            return (string) $name;
         }
 
 

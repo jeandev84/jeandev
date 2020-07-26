@@ -78,21 +78,19 @@ class Route implements \ArrayAccess
      private $options = [];
 
 
-     /**
-      * Route constructor.
-      *
-      * @param $methods
-      * @param $path
-      * @param $target
-      * @param $name
-      * @param $options
+    /**
+     * Route constructor.
+     *
+     * @param $methods
+     * @param $path
+     * @param $target
+     * @param $options
      */
-     public function __construct($methods = null, $path = null, $target = null, $name = null, $options = null)
+     public function __construct($methods = null, $path = null, $target = null, $options = null)
      {
            $this->setMethods($methods);
            $this->setPath($path);
            $this->setTarget($target);
-           $this->setName($name);
            $this->setOptions($options);
      }
 
