@@ -18,7 +18,15 @@ class Router
       const OPTION_PARAM_PREFIX     = 'prefix';
       const OPTION_PARAM_NAMESPACE  = 'namespace';
       const OPTION_PARAM_MIDDLEWARE = 'middleware';
+      const FORMAT_PARAMS = [
+          '{([\w]+)}',
+          ':([\w]+)'
+      ];
 
+      const DEFAULT_REGEX_EXPRESSION = [
+        'id'   => '[0-9]+',
+        'slug' => '[a-z\-0-9]+'
+      ];
 
       /**
        * @var string
@@ -285,6 +293,9 @@ class Router
                $this->options
            );
 
+           $route->setFormatParams(self::FORMAT_PARAMS);
+           $route->setDefaultRegex(self::DEFAULT_REGEX_EXPRESSION);
+
            $route->setName(
                $this->resolveName($name, $route)
            );
@@ -309,7 +320,7 @@ class Router
           {
              if($route->match($requestMethod, $requestUri))
              {
-                return $route;
+                  return $route;
              }
           }
 
@@ -317,8 +328,21 @@ class Router
       }
 
 
-
       /**
+       * @param Route $route
+       * @return array
+      */
+      public function getFilteredMatchParams(Route $route)
+      {
+         return array_filter($route->getMatches(), function ($key) {
+
+            return ! is_numeric($key);
+
+         }, ARRAY_FILTER_USE_KEY);
+     }
+
+
+    /**
        * @param array $middleware
        * @return $this
       */
@@ -362,6 +386,56 @@ class Router
        }
 
 
+       /**
+        * @param $context
+        * @param array $params
+        * @return bool
+       */
+       public function generate($context, $params = [])
+       {
+            if(! isset($this->namedRoutes[$context]))
+            {
+                 return $this->generateUrl($context, $params);
+            }
+
+            $path = $this->replaceParams($this->namedRoutes[$context], $params);
+            return $this->generateUrl($path);
+       }
+
+
+      /**
+       * @param string $path
+       * @param array $params
+       * @return string
+     */
+     public function generateUrl(string $path, array $params = [])
+     {
+        $qs = http_build_query($params);
+
+        return implode([
+            $this->baseUrl . '/' . trim($path, '/'),
+            ($qs ? '?'. $qs : '')
+        ]);
+     }
+
+
+       /**
+         * @param string $path
+         * @param array $params
+         * @return string|string[]|null
+      */
+      protected function replaceParams(string $path, array $params = [])
+      {
+            if($params)
+            {
+                foreach($params as $k => $v)
+                {
+                    $path = preg_replace(["#{{$k}}#", "#:{$k}#"], $v, $path);
+                }
+            }
+
+            return $path;
+     }
 
         /**
          * @param array $items

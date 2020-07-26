@@ -13,18 +13,6 @@ use RuntimeException;
 class Route implements \ArrayAccess
 {
 
-     const DEFAULT_REGEX_EXPRESSION = [
-         'id'   => '[0-9]+',
-         'slug' => '[a-z\-0-9]+'
-     ];
-
-
-    const FORMAT_PARAMS = [
-        '{([\w]+)}',
-        ':([\w]+)'
-    ];
-
-
      /**
       * @var array
      */
@@ -42,7 +30,6 @@ class Route implements \ArrayAccess
       * @var array
      */
      private $regex = [];
-
 
 
      /**
@@ -79,6 +66,19 @@ class Route implements \ArrayAccess
 
 
     /**
+     * @var array
+    */
+    private $formatParams = [];
+
+
+    /**
+     * @var array
+   */
+    private $defaultRegex = [];
+
+
+
+    /**
      * Route constructor.
      *
      * @param $methods
@@ -93,6 +93,8 @@ class Route implements \ArrayAccess
            $this->setTarget($target);
            $this->setOptions($options);
      }
+
+
 
      
     /**
@@ -114,7 +116,6 @@ class Route implements \ArrayAccess
         $this->methods = $methods;
         return $this;
     }
-
 
 
     /**
@@ -139,24 +140,102 @@ class Route implements \ArrayAccess
 
 
 
+
     /**
      * @return string
     */
     public function getPattern()
     {
-        return '#^' . trim($this->getPath(), '/') . '$#';
+        return '#^' . $this->compile(trim($this->getPath(), '/')) . '$#';
+    }
+
+
+    /**
+     * @param string $path
+     * @return string
+    */
+    private function compile(string $path)
+    {
+        return preg_replace_callback($this->getFormatParams(), [$this, 'generateRegex'], $path);
+    }
+
+
+    /**
+     * @param array $matches
+     * @return array
+    */
+    public function getFilteredMatchParams(array $matches)
+    {
+        return array_filter($matches, function ($key) {
+
+            return ! is_numeric($key);
+
+        }, ARRAY_FILTER_USE_KEY);
     }
 
 
 
     /**
-     * @return array
+     * @param array $matches
+     * @return string
     */
-    public function getRegex(): array
+    public function generateRegex(array $matches)
     {
-         return array_merge(self::DEFAULT_REGEX_EXPRESSION, $this->regex);
+        if($this->hasRegex($matches[1]))
+        {
+            return '(?P<'. $matches[1] .'>'. $this->getRegex($matches[1]) . ')';
+        }
+
+        return '([^/]+)';
     }
 
+
+    /**
+     * @param $name
+     * @return bool
+    */
+    public function hasRegex($name)
+    {
+         return \array_key_exists($name, $this->getAvailableRegex());
+    }
+
+
+    /**
+     * @param string|null $name
+     * @return string|array
+    */
+    public function getRegex(string $name)
+    {
+        $regex = $this->getAvailableRegex();
+        return $regex[$name] ?? '';
+    }
+
+
+    /**
+     * @return array
+    */
+    public function getAvailableRegex()
+    {
+        return array_merge($this->defaultRegex, $this->regex);
+    }
+
+
+    /**
+     * @return string[]
+    */
+    public function getDefaultRegex()
+    {
+        return $this->defaultRegex;
+    }
+
+
+    /**
+     * @param array $defaultRegex
+    */
+    public function setDefaultRegex(array $defaultRegex)
+    {
+        $this->defaultRegex = $defaultRegex;
+    }
 
 
     /**
@@ -166,11 +245,35 @@ class Route implements \ArrayAccess
     */
     public function setRegex($name, $expression): Route
     {
-        $this->regex[$name] = $expression;
-
+        $this->regex = str_replace( '(', '(?:', $expression);
         return $this;
     }
 
+
+    /**
+     * @return array
+    */
+    public function getFormatParams(): array
+    {
+        return $this->formatParams;
+    }
+
+    /**
+     * @param array $formats
+     * @return Route
+     */
+    public function setFormatParams(array $formats): Route
+    {
+        $formatParams = [];
+
+        foreach ($formats as $format)
+        {
+            $formatParams[] = '#'. $format . '#';
+        }
+
+        $this->formatParams = $formatParams;
+        return $this;
+    }
 
 
 
@@ -234,13 +337,14 @@ class Route implements \ArrayAccess
     public function setMatches(array $matches): Route
     {
         $this->matches = $matches;
+
         return $this;
     }
 
 
     /**
      * @return array
-     */
+    */
     public function getMiddleware(): array
     {
         return $this->middleware[$this->path] ?? [];
@@ -297,11 +401,11 @@ class Route implements \ArrayAccess
     */
     public function isMatchingPath(string $requestUri)
     {
-        $matches = [];
-
         if(preg_match($this->getPattern(), trim($requestUri, '/'), $matches))
         {
-            $this->setMatches($matches);
+            $this->setMatches(
+                $this->getFilteredMatchParams($matches)
+            );
 
             return true;
         }
@@ -321,6 +425,16 @@ class Route implements \ArrayAccess
                && $this->isMatchingPath($requestUri);
     }
 
+
+    /**
+     * @param $name
+     * @return string|string[]
+    */
+//    private function resolveRegex($name)
+//    {
+//        $regex = array_merge(self::DEFAULT_REGEX_EXPRESSION, $this->regex);
+//        return str_replace( '(', '(?:', $regex[$name]);
+//    }
 
 
     /**

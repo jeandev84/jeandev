@@ -536,7 +536,7 @@ class Router implements RouterInterface
      * @param $name
      * @param array $params
      * @return string
-     */
+    */
     private function generatePathByName($name, $params = [])
     {
         $path = $this->namedRoutes[$name];
@@ -650,7 +650,7 @@ class Router implements RouterInterface
     /**
      * @param $key
      * @return string|string[]
-     */
+    */
     private function resolvePattern($key)
     {
         return str_replace( '(', '(?:', $this->patterns[$key]);
@@ -677,10 +677,12 @@ class Router implements RouterInterface
     private function getFormatParams()
     {
         $formats = [];
+
         foreach ($this->formatParams as $format)
         {
             $formats[] = '#'. $format . '#';
         }
+
         return $formats;
     }
 

@@ -7,7 +7,7 @@ use Jan\Component\Routing\Router;
 require_once __DIR__.'/../vendor/autoload.php';
 
 
-$router = new Router();
+$router = new Router($_SERVER['HTTP_HOST']);
 
 
 $router->map('GET', '/', 'HomeController@index', 'home');
@@ -21,6 +21,8 @@ $router->get('/foo', function () {
 });
 
 
+echo $router->generate('home') . '<br>';
+echo $router->generate('post.show', ['slug' => 'article-du-jour', 'id' => 1]);
 
 dump($router->getNamedRoutes());
 dump($router->getRoutes());
