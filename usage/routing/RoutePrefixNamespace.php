@@ -35,9 +35,15 @@ $options = [
     'prefix' => 'admin'
 ];
 
+$router->namespace('Admin', function () use($router) {
+    $router->map('GET', '/', 'HomeController@index', 'home');
+    $router->map('GET', '/post', 'PostController@index', 'post.list');
+});
 
-$router->map('GET', '/', 'HomeController@index', 'home');
-$router->map('GET', '/post', 'PostController@index', 'post.list');
+$router->prefix('admin', function () use($router) {
+    $router->map('GET', '/', 'HomeController@index', 'home');
+    $router->map('GET', '/post', 'PostController@index', 'post.list');
+});
 
 
 dump($router->getNamedRoutes());

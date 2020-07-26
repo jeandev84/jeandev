@@ -3,6 +3,7 @@ namespace Jan\Component\Routing;
 
 
 use Closure;
+use Jan\Component\Routing\Contracts\RouterInterface;
 use Jan\Component\Routing\Exception\RouterException;
 use RuntimeException;
 
@@ -12,7 +13,7 @@ use RuntimeException;
  * Class Router
  * @package Jan\Component\Routing
 */
-class Router
+class Router implements RouterInterface
 {
 
       const OPTION_PARAM_PREFIX     = 'prefix';
@@ -27,6 +28,7 @@ class Router
         'id'   => '[0-9]+',
         'slug' => '[a-z\-0-9]+'
       ];
+
 
       /**
        * @var string
@@ -69,6 +71,13 @@ class Router
 
 
       /**
+        * @var bool
+      */
+      private $isPrettyUrl = true;
+
+
+
+      /**
        * Router constructor.
        *
        * @param string $baseUrl
@@ -82,15 +91,26 @@ class Router
       }
 
 
+      /**
+       * @param bool $isPrettyUrl
+       * @return $this
+      */
+      public function isPrettyUrl(bool $isPrettyUrl = true)
+      {
+          $this->isPrettyUrl = $isPrettyUrl;
+
+          return $this;
+      }
 
 
-    /**
-     * @return array
+
+     /**
+      * @return array
      */
-    public function getRoutes()
-    {
+     public function getRoutes()
+     {
         return $this->routes;
-    }
+     }
 
 
 
@@ -328,21 +348,8 @@ class Router
       }
 
 
+
       /**
-       * @param Route $route
-       * @return array
-      */
-      public function getFilteredMatchParams(Route $route)
-      {
-         return array_filter($route->getMatches(), function ($key) {
-
-            return ! is_numeric($key);
-
-         }, ARRAY_FILTER_USE_KEY);
-     }
-
-
-    /**
        * @param array $middleware
        * @return $this
       */
@@ -391,7 +398,7 @@ class Router
         * @param array $params
         * @return bool
        */
-       public function generate($context, $params = [])
+       public function generate(string $context, array $params = [])
        {
             if(! isset($this->namedRoutes[$context]))
             {
@@ -412,10 +419,7 @@ class Router
      {
         $qs = http_build_query($params);
 
-        return implode([
-            $this->baseUrl . '/' . trim($path, '/'),
-            ($qs ? '?'. $qs : '')
-        ]);
+        return $this->baseUrl . '/' . trim($path, '/') . ($qs ? '?'. $qs : '');
      }
 
 

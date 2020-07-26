@@ -8,7 +8,13 @@ namespace App\Controllers;
 */
 class PostController
 {
-    public function index($slug, $id)
+    public function index()
+    {
+        dump(__METHOD__);
+    }
+
+
+    public function show($slug, $id)
     {
         dump(__METHOD__);
     }

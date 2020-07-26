@@ -2,6 +2,7 @@
 namespace Jan\Component\Routing;
 
 
+use Jan\Component\Routing\Exception\RouteException;
 use RuntimeException;
 
 
@@ -67,37 +68,35 @@ class Route implements \ArrayAccess
 
     /**
      * @var array
-    */
-    private $formatParams = [];
-
-
-    /**
-     * @var array
-   */
-    private $defaultRegex = [];
-
-
-
-    /**
-     * Route constructor.
-     *
-     * @param $methods
-     * @param $path
-     * @param $target
-     * @param $options
      */
-     public function __construct($methods = null, $path = null, $target = null, $options = null)
+     private $formatParams = [];
+
+
+     /**
+      * @var array
+     */
+     private $defaultRegex = [];
+
+
+     /**
+      * Route constructor.
+      *
+      * @param array $methods
+      * @param string $path
+      * @param null $target
+      * @param array $options
+     */
+     public function __construct(array $methods = [], string $path = '', $target = null, array $options = [])
      {
-           $this->setMethods($methods);
-           $this->setPath($path);
-           $this->setTarget($target);
-           $this->setOptions($options);
+         $this->setMethods($methods);
+         $this->setPath($path);
+         $this->setTarget($target);
+         $this->setOptions($options);
      }
 
 
 
-     
-    /**
+     /**
      * @return array
     */
     public function getMethods(): array
@@ -245,7 +244,7 @@ class Route implements \ArrayAccess
     */
     public function setRegex($name, $expression): Route
     {
-        $this->regex = str_replace( '(', '(?:', $expression);
+        $this->regex[$name] = str_replace( '(', '(?:', $expression);
         return $this;
     }
 
@@ -257,6 +256,7 @@ class Route implements \ArrayAccess
     {
         return $this->formatParams;
     }
+
 
     /**
      * @param array $formats
@@ -388,10 +388,18 @@ class Route implements \ArrayAccess
     /**
      * @param string $requestMethod
      * @return bool
+     * @throws RouteException
     */
     public function isMatchingMethod(string $requestMethod)
     {
-         return \in_array($requestMethod, $this->methods);
+         if(! \in_array($requestMethod, $this->methods))
+         {
+              throw new RouteException(
+                  sprintf('Method %s is not allowed method for current route', $requestMethod)
+              );
+         }
+
+         return true;
     }
 
 
@@ -401,7 +409,7 @@ class Route implements \ArrayAccess
     */
     public function isMatchingPath(string $requestUri)
     {
-        if(preg_match($this->getPattern(), trim($requestUri, '/'), $matches))
+        if(preg_match($this->getPattern(), $this->resolveUrl($requestUri), $matches))
         {
             $this->setMatches(
                 $this->getFilteredMatchParams($matches)
@@ -414,15 +422,27 @@ class Route implements \ArrayAccess
     }
 
 
+
+    /**
+     * @param string $url
+     * @return string
+    */
+    public function resolveUrl(string $url)
+    {
+        return trim(parse_url($url, PHP_URL_PATH), '/');
+    }
+
+
+
     /**
      * @param $requestMethod
      * @param $requestUri
      * @return bool
-    */
+     * @throws RouteException
+   */
     public function match($requestMethod, $requestUri)
     {
-        return $this->isMatchingMethod($requestMethod)
-               && $this->isMatchingPath($requestUri);
+        return $this->isMatchingMethod($requestMethod)  && $this->isMatchingPath($requestUri);
     }
 
 
