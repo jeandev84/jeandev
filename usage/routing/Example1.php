@@ -7,36 +7,43 @@ use Jan\Component\Routing\Router;
 require_once __DIR__.'/../vendor/autoload.php';
 
 
+# USABLE 1
+/*
+
 $router = new Router();
 
-$options = [
-  'prefix' => 'admin',
-  'namespace' => 'Admin'
+$routes = [
+    [
+        'methods' => ['GET'],
+        'path' => '/',
+        'target' => function () {
+            return 'Hello';
+        },
+        'name' => 'home'
+    ],
+    [
+        'methods' => ['POST'],
+        'path' => '/contact',
+        'target' => function () {
+            return [
+               'name'  => 'Жан-Клод',
+               'email' => 'jeanyao@ymail.com'
+            ];
+        },
+        'name' => 'contact'
+    ],
 ];
 
-$router->group($options, function () use ($router){
 
-    $router->map('GET', '/posts', 'PostController@index')
-           ->name('admin.post.index');
+$router->setRoutes($routes);
 
-    $router->map('GET', '/post/{id}', 'PostController@shpw')
-           ->name('admin.post.show');
+*/
 
 
-    $router->map('GET', '/post/new', 'PostController@new')
-            ->name('admin.post.create');
+# USABLE 2
 
-    $router->map('GET|POST', '/post/{id}/edit', 'PostController@edit')
-            ->name('admin.post.edit');
+$router = new Router();
 
-
-    $router->map('DELETE', '/post/{id}/delete', 'PostController@delete')
-           ->name('admin.post.delete');
-
-});
-
-
-/*
 $router->map('GET', '/', 'HomeController@index')
     ->name('home')
     ->middleware([
@@ -51,12 +58,12 @@ $router->map('GET', '/about', 'HomeController@about', 'about')
 
 
 $router->map('GET|POST', '/contact', 'HomeController@contact', 'contact');
+
 $router->map('GET', '/post/{slug}/{id}', 'HomeController@contact', 'post.show')
-->where([
-  'slug' => '(\w+)',
-   'id'   => '(\d+)'
-]);
-*/
+    ->where([
+        'slug' => '(\w+)',
+        'id'   => '(\d+)'
+    ]);
 
 
 dump($router->getNamedRoutes());

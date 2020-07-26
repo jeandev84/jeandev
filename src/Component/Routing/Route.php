@@ -13,10 +13,16 @@ use RuntimeException;
 class Route implements \ArrayAccess
 {
 
-     const REGEX_EXPRESSION_DEFAULT = [
+     const DEFAULT_REGEX_EXPRESSION = [
          'id'   => '[0-9]+',
          'slug' => '[a-z\-0-9]+'
      ];
+
+
+    const FORMAT_PARAMS = [
+        '{([\w]+)}',
+        ':([\w]+)'
+    ];
 
 
      /**
@@ -150,7 +156,7 @@ class Route implements \ArrayAccess
     */
     public function getRegex(): array
     {
-         return array_merge(self::REGEX_EXPRESSION_DEFAULT, $this->regex);
+         return array_merge(self::DEFAULT_REGEX_EXPRESSION, $this->regex);
     }
 
 
@@ -251,14 +257,6 @@ class Route implements \ArrayAccess
     public function setMiddleware(array $middleware): Route
     {
         $this->middleware = $middleware;
-
-        /*
-        if($middleware = $this->getOption(self::OPTION_PARAM_MIDDLEWARE))
-        {
-            $this->middleware = $middleware;
-        }
-        */
-
         return $this;
     }
 
@@ -323,24 +321,6 @@ class Route implements \ArrayAccess
     {
         return $this->isMatchingMethod($requestMethod)
                && $this->isMatchingPath($requestUri);
-    }
-
-
-    /**
-     * @param $name
-     * @param array $params
-     * @return string
-    */
-    public function generate($name, $params = [])
-    {
-         $path = '';
-
-         if($this->name === $name)
-         {
-              $path = $this->getPath();
-         }
-
-         return $path;
     }
 
 

@@ -263,7 +263,7 @@ class Router
            );
 
            $route->setMiddleware(
-               (array) $this->getOption(self::OPTION_PARAM_MIDDLEWARE)
+               $this->getOption(self::OPTION_PARAM_MIDDLEWARE, [])
            );
 
            return $this->add($route);
@@ -335,113 +335,115 @@ class Router
        }
 
 
-    /**
-     * Determine parses
-     *
-     * @param $name
-     * @param $expression
-     * @return array
-    */
-    private function parseWhere($name, $expression)
-    {
-        return \is_array($name) ? $name : [$name => $expression];
-    }
 
-
-    /**
-     * @param array $items
-     * @return Route
-    */
-    protected function mapItems(array $items): Route
-    {
-        $route = new Route();
-
-        foreach ($items as $key => $value)
+        /**
+         * @param array $items
+         * @return Route
+        */
+        protected function mapItems(array $items): Route
         {
-            $route[$key] = $value;
-        }
+            $route = new Route();
 
-        $this->add($route);
-    }
-
-
-    /**
-     * Get option by given param
-     *
-     * @param $key
-     * @return mixed|null
-    */
-    private function getOption($key)
-    {
-        return $this->options[$key] ?? null;
-    }
-
-
-
-    /**
-     * @param $methods
-     * @return array
-     */
-    private function resolveMethods($methods)
-    {
-        if(is_string($methods))
-        {
-            $methods = explode('|', $methods);
-        }
-
-        return (array) $methods;
-    }
-
-
-    /**
-     * @param $path
-     * @return string
-     */
-    private function resolvePath(string $path)
-    {
-        if($prefix = $this->getOption(self::OPTION_PARAM_PREFIX))
-        {
-            $path = rtrim($prefix, '/') . '/'. ltrim($path, '/');
-        }
-
-        return $path;
-    }
-
-
-    /**
-     * @param $target
-     * @return string
-    */
-    private function resolveTarget($target)
-    {
-        if($namespace = $this->getOption(self::OPTION_PARAM_NAMESPACE))
-        {
-            $target = rtrim($namespace, '\\') .'\\' . $target;
-        }
-
-        return $target;
-    }
-
-
-    /**
-     * @param $name
-     * @param $path
-     * @return mixed
-    */
-    private function resolveName($name, $path)
-    {
-        if($name)
-        {
-            if(isset($this->namedRoutes[$name]))
+            foreach ($items as $key => $value)
             {
-                throw new RuntimeException(
-                    sprintf('This route name (%s) already taken!', $name)
-                );
+                $route[$key] = $value;
             }
 
-            $this->namedRoutes[$name] = $path;
+            $this->add($route);
         }
 
-        return $name;
-    }
+
+        /**
+         * Get option by given param
+         *
+         * @param $key
+         * @param null $default
+         * @return mixed|null
+        */
+        private function getOption($key, $default = null)
+        {
+            return $this->options[$key] ?? $default;
+        }
+
+
+
+        /**
+         * @param $methods
+         * @return array
+        */
+        private function resolveMethods($methods)
+        {
+            if(is_string($methods))
+            {
+                $methods = explode('|', $methods);
+            }
+
+            return (array) $methods;
+        }
+
+
+        /**
+         * @param $path
+         * @return string
+        */
+        private function resolvePath(string $path)
+        {
+            if($prefix = $this->getOption(self::OPTION_PARAM_PREFIX))
+            {
+                $path = rtrim($prefix, '/') . '/'. ltrim($path, '/');
+            }
+
+            return $path;
+        }
+
+
+        /**
+         * @param $target
+         * @return string
+        */
+        private function resolveTarget($target)
+        {
+            if($namespace = $this->getOption(self::OPTION_PARAM_NAMESPACE))
+            {
+                $target = rtrim($namespace, '\\') .'\\' . $target;
+            }
+
+            return $target;
+        }
+
+
+        /**
+         * @param $name
+         * @param $path
+         * @return mixed
+        */
+        private function resolveName($name, $path)
+        {
+            if($name)
+            {
+                if(isset($this->namedRoutes[$name]))
+                {
+                    throw new RuntimeException(
+                        sprintf('This route name (%s) already taken!', $name)
+                    );
+                }
+
+                $this->namedRoutes[$name] = $path;
+            }
+
+            return $name;
+        }
+
+
+        /**
+         * Determine parses
+         *
+         * @param $name
+         * @param $expression
+         * @return array
+        */
+        private function parseWhere($name, $expression)
+        {
+            return \is_array($name) ? $name : [$name => $expression];
+        }
 }
