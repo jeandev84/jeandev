@@ -7,46 +7,39 @@ use Jan\Component\Routing\Router;
 require_once __DIR__.'/../vendor/autoload.php';
 
 
-$router = new Router($_SERVER['HTTP_HOST']);
-
+$container = new \Jan\Component\DI\Container();
 
 /*
-$router->map('GET', '/', 'HomeController@index', 'home');
-$router->map('GET', '/about', 'HomeController@about', 'about');
-$router->map('GET|POST', '/contact', 'HomeController@contact', 'contact');
-$router->map('GET', '/post', 'PostController@index', 'post.list');
-$router->map('GET', '/post/{slug}-{id}', 'PostController@show', 'post.show');
-
-
-$router->get('/foo', function () {
-   echo 'Hello Friend';
+$container->bind('name', 'Жан-Клод');
+$container->bind('foo', function () {
+    return new \App\Foo();
 });
 
-
-echo $router->generate('home') . '<br>';
-echo $router->generate('post.show', ['slug' => 'article-du-jour', 'id' => 1]) . '<br>';
-echo $router->generate('admin/users', ['page' => 1, 'sort_type' => 'asc', 'sort_name' => 'name', 'direction' => 'asc']);
+echo $container->get('name');
+dump($container->get('foo'));
 */
 
-$router->isPrettyUrl(false);
+/*
+$container->bind(\App\Foo::class, function () {
+    return new \App\Foo();
+});
+*/
 
-$options = [
-    'namespace' => 'Admin',
-    'prefix' => 'admin'
-];
+$container->singleton(\App\Foo::class, App\Bar::class);
+
+dump($container->get(\App\Foo::class));
+
+/*
+dump($container->get(\App\Foo::class));
+dump($container->get(\App\Foo::class));
+dump($container->get(\App\Foo::class));
 
 
-$router->map('GET', '/', 'HomeController@index', 'home');
-$router->map('GET', '/post', 'PostController@index', 'post.list');
+dump($container->make(\App\Foo::class));
+dump($container->make(\App\Foo::class));
+dump($container->make(\App\Foo::class));
 
+$container->make(\App\Controllers\HomeController::class);
+*/
 
-dump($router->getNamedRoutes());
-dump($router->getRoutes());
-
-
-$route = $router->match($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
-
-?>
-    <a href="/post/index.php?page=1">Posts</a>
-<?php
-dd($route);
+dd($container);
