@@ -9,4 +9,12 @@ namespace App;
 class Foo
 {
 
+      /**
+       * Foo constructor.
+       * @param Bar $bar
+      */
+      public function __construct(Bar $bar)
+      {
+           echo __METHOD__.'<br>';
+      }
 }

@@ -222,9 +222,14 @@ class Container implements \ArrayAccess, ContainerInterface
              $this->bindings[$abstract]['concrete']
          );
 
-         if(is_string($concrete) && ! isset($this->instances[$concrete]))
+         if(is_string($concrete))
          {
-             return $this->resolve($concrete);
+             if(! isset($this->instances[$concrete]))
+             {
+                 return $this->resolve($concrete);
+             }
+
+             return $this->instances[$concrete];
          }
 
          if($this->isSingleton($abstract))
@@ -292,7 +297,6 @@ class Container implements \ArrayAccess, ContainerInterface
         {
             return $abstract;
         }
-
 
         $reflectedClass = new ReflectionClass($abstract);
 
