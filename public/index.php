@@ -25,9 +25,13 @@ $container->bind(\App\Foo::class, function () {
 });
 */
 
+$container->bind('something', 'Hello! Friend');
 $container->singleton(\App\Foo::class, App\Bar::class);
 
 dump($container->get(\App\Foo::class));
+
+
+echo $container->get('something');
 
 /*
 dump($container->get(\App\Foo::class));
