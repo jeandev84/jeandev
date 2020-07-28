@@ -337,6 +337,23 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @param $abstract
+     * @return mixed
+    */
+    public function getAlias($abstract)
+    {
+        if(isset($this->aliases[$abstract]))
+        {
+            return $this->aliases[$abstract];
+        }
+
+
+        return $abstract;
+    }
+
+
+
+    /**
+     * @param $abstract
      * @param $arguments
      * @return mixed
      * @throws Exceptions\ContainerException
@@ -345,16 +362,21 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function resolve($abstract, $arguments = [])
     {
-        if(! isset($this->aliases[$abstract]) && ! class_exists($abstract))
-        {
-             return $abstract;
-        }
+        $abstract = $this->getAlias($abstract);
 
-        if(isset($this->aliases[$abstract]))
+        /*
+        foreach ($this->getProvides() as $provide)
         {
-            $abstract = $this->aliases[$abstract];
-        }
+            if(! isset($this->aliases[$provide]))
+            {
+                throw new ContainerException(
+                    sprintf('Can not resolve this alias %s', $provide)
+                );
+            }
 
+            $abstract = $this->aliases[$provide];
+        }
+        */
 
         $reflectedClass = new ReflectionClass($abstract);
 
@@ -510,6 +532,15 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
+    /**
+     * @return array
+    */
+    public function getProvides()
+    {
+         return $this->provides;
+    }
+
+
 
     /**
      * @param ServiceProvider $provider
@@ -613,6 +644,8 @@ class Container implements \ArrayAccess, ContainerInterface
         if(method_exists($object, $method))
         {
              call_user_func_array([$object, $method], $arguments);
+
+             /* $object->{$method}(...$arguments); */
         }
     }
 
@@ -674,6 +707,7 @@ class Container implements \ArrayAccess, ContainerInterface
 
         return $provider;
     }
+
 
 
     /**

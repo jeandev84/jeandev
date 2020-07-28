@@ -44,6 +44,7 @@ $container->make(\App\Controllers\HomeController::class);
 Testing Service provider
 */
 $container->bind('bar', new \App\Bar());
+$container->setAlias('foo', \App\Foo::class);
 
 $container->addServiceProvider(
     new \App\Providers\AppServiceProvider()
@@ -61,7 +62,6 @@ dump($person->getName(), $person->getEmail());
 
 
 //$container->autowire(false);
-
 $container->singleton(\Jan\Component\DI\Contracts\ContainerInterface::class, function () {
 
     return new \Jan\Component\DI\Container();
