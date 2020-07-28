@@ -8,6 +8,7 @@ require_once __DIR__.'/../vendor/autoload.php';
 $container = new \Jan\Component\DI\Container();
 
 /*
+Testing Bindings / Singleton / Aliases
 $container->bind('name', 'Жан-Клод');
 $container->bind('foo', function () {
     return new \App\Foo();
@@ -38,5 +39,39 @@ dump($container->make(\App\Foo::class));
 
 $container->make(\App\Controllers\HomeController::class);
 */
+
+/*
+Testing Service provider
+*/
+$container->bind('bar', new \App\Bar());
+
+$container->addServiceProvider(
+    new \App\Providers\AppServiceProvider()
+);
+
+dump($container->get('foo'));
+
+
+/*
+Testing call method
+$person = new \App\Person();
+$container->call($person, 'setName', ['Жан-Клод', 'jeanyao@ymail.com']);
+dump($person->getName(), $person->getEmail());
+*/
+
+
+//$container->autowire(false);
+
+$container->singleton(\Jan\Component\DI\Contracts\ContainerInterface::class, function () {
+
+    return new \Jan\Component\DI\Container();
+});
+
+$container->callAction(\App\Controllers\HomeController::class, 'index', ['slug' => 'salut-les-amis', 'id' => 1]);
+//$container->boot(\App\Controllers\HomeController::class);
+// $container->call(new \App\Controllers\HomeController(), 'index', []);
+
+
+$container->boots();
 
 dd($container);

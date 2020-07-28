@@ -2,6 +2,8 @@
 namespace App\Controllers;
 
 
+use Jan\Component\DI\Contracts\ContainerInterface;
+
 /**
  * Class HomeController
  * @package App\Controllers
@@ -9,20 +11,35 @@ namespace App\Controllers;
 class HomeController
 {
 
-    public function index()
-    {
-         dump(__METHOD__);
-    }
+   /** @var ContainerInterface  */
+   protected $container;
 
 
-    public function about()
-    {
+   /**
+     * HomeController constructor.
+     * @param ContainerInterface $container
+   */
+   public function __construct(ContainerInterface $container)
+   {
+        $this->container = $container;
+   }
+
+   public function index(ContainerInterface $container, $slug, $id)
+   {
+       // dump($this->container);
+       dump($slug, $id);
+       dump(__METHOD__);
+   }
+
+
+   public function about()
+   {
         dump(__METHOD__);
-    }
+   }
 
 
-    public function contact()
-    {
+   public function contact()
+   {
         dump(__METHOD__);
-    }
+   }
 }

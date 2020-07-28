@@ -22,6 +22,25 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
+     * @var bool
+    */
+    private $autowire = true;
+
+
+    /**
+     * @var bool
+    */
+    private $booted  = false;
+
+
+    /**
+     * @var array
+    */
+    protected $calls = [];
+
+
+
+    /**
      * @var Container
     */
     protected static $instance;
@@ -74,6 +93,19 @@ class Container implements \ArrayAccess, ContainerInterface
 
          return static::$instance;
     }
+
+
+    /**
+     * @param bool $status
+     * @return $this
+    */
+    public function autowire(bool $status)
+    {
+        $this->autowire = $status;
+
+        return $this;
+    }
+
 
 
     /**
@@ -440,30 +472,6 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
-    /**
-     * @param $provider
-     * @return bool|ServiceProvider|mixed|object
-     * @throws ContainerException
-     * @throws ReflectionException
-     * @throws ResolverDependencyException
-    */
-    protected function resolveProvider($provider)
-    {
-         if(is_string($provider))
-         {
-             $provider = $this->resolve($provider);
-         }
-
-         if(! $provider instanceof ServiceProvider)
-         {
-             throw new ContainerException(
-                 sprintf('Class %s is not instance of ServiceProvider', get_class($provider))
-             );
-         }
-
-         return $provider;
-    }
-
 
     /**
      * @param array $providers
@@ -481,56 +489,190 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
+     * @param ServiceProvider $serviceProvider
+     * @return array
+     */
+    public function getServiceProvides(ServiceProvider $serviceProvider)
+    {
+         return $serviceProvider->getProvides();
+    }
+
+
+    /**
+     * @param array $provides
+     * @return $this
+    */
+    public function setProvides(array $provides)
+    {
+         $this->provides = array_merge($this->provides, $provides);
+
+         return $this;
+    }
+
+
+
+    /**
      * @param ServiceProvider $provider
      * @throws ContainerException
     */
     public function runServiceProvider(ServiceProvider $provider)
     {
-        if(! in_array($provider, $this->providers))
-        {
             $provider->setContainer($this);
+            $abstract = get_class($provider);
 
-            if($provides = $provider->getProvides())
+            if(! \in_array($provider, $this->providers))
             {
-                foreach ($provides as $provide)
-                {
-                    if(! \array_key_exists($provide, $this->aliases))
-                    {
-                        throw new ContainerException('Can not resolve this alias!');
-                    }
+                $this->setProvides($provider->getProvides());
 
-                    //
+                $implements = class_implements($provider);
+                if(isset($implements[BootableServiceProvider::class]))
+                {
+                     $provider->boot();
                 }
 
-                $this->provides[] = $provides;
+                $provider->register();
+                $this->providers[] = $provider;
             }
+    }
 
-            $implements = class_implements($provider);
 
-            if(isset($implements[BootableServiceProvider::class]))
-            {
-                 /* $provider->boot(); */
-                 $this->call($provider, 'boot');
-            }
+    /**
+     * @param string $abstract
+     * @param string $method
+     * @param array $arguments
+     * @return Container
+    */
+    public function call(string $abstract, string $method, $arguments = [])
+    {
+          $this->calls[$abstract][] = [$abstract, $method, $arguments];
 
-            /* $provider->register(); */
-            $this->call($provider, 'register');
-            $this->providers[] = $provider;
+          return $this;
+    }
+
+
+
+    /**
+     * @param $abstract
+     * @return bool
+    */
+    public function isCalled($abstract)
+    {
+        return \array_key_exists($abstract, $this->calls);
+    }
+
+
+
+    /**
+     * @param null $abstract
+     * @return array|mixed
+    */
+    public function getCall($abstract)
+    {
+         if($this->isCalled($abstract))
+         {
+             return $this->calls[$abstract];
+         }
+
+         return [];
+    }
+
+
+    /**
+     * @return array
+    */
+    public function getCalls()
+    {
+        return $this->calls;
+    }
+
+
+
+    /**
+     * @param $abstract
+     * @param $method
+     * @param array $arguments
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+    */
+    public function callAction($abstract, $method, $arguments = [])
+    {
+        if(is_object($abstract))
+        {
+            $abstract = get_class($abstract);
+        }
+
+        if($this->autowire)
+        {
+            $reflectedMethod = new ReflectionMethod($abstract, $method);
+            $arguments = $this->resolveDependencies($reflectedMethod, $arguments);
+        }
+
+        $object = $this->get($abstract);
+
+        if(method_exists($object, $method))
+        {
+             call_user_func_array([$object, $method], $arguments);
         }
     }
 
 
     /**
-     * @param object $object $object
-     * @param string $method
-     * @param array $arguments
+     * @param $id
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
     */
-    public function call($object, $method, $arguments = [])
+    public function boot($id)
     {
-         if(is_callable($object, $method))
-         {
-             $object->{$method}(...$arguments);
-         }
+        foreach ($this->getCall($id) as $call)
+        {
+            list($abstract, $method, $arguments) = $call;
+
+            $this->callAction($abstract, $method, $arguments);
+        }
+    }
+
+
+
+    /**
+     * Boot all calls
+    */
+    public function boots()
+    {
+        $bootIds = array_keys($this->getCalls());
+
+        foreach ($bootIds as $id)
+        {
+            $this->boot($id);
+        }
+    }
+
+
+
+
+    /**
+     * @param $provider
+     * @return bool|ServiceProvider|mixed|object
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+    */
+    private function resolveProvider($provider)
+    {
+        if(is_string($provider))
+        {
+            $provider = $this->resolve($provider);
+        }
+
+        if(! $provider instanceof ServiceProvider)
+        {
+            throw new ContainerException(
+                sprintf('Class %s is not instance of ServiceProvider', get_class($provider))
+            );
+        }
+
+        return $provider;
     }
 
 
