@@ -1,6 +1,4 @@
 <?php
-
-
 use Jan\Component\Routing\Route;
 use Jan\Component\Routing\Router;
 
@@ -17,25 +15,18 @@ $container->bind('foo', function () {
 
 echo $container->get('name');
 dump($container->get('foo'));
-*/
 
-/*
 $container->bind(\App\Foo::class, function () {
     return new \App\Foo();
 });
-*/
 
-/*
 $container->bind('something', 'Hello! Friend');
 $container->singleton(\App\Foo::class, App\Bar::class);
-*/
-
 dump($container->get(\App\Foo::class));
-
-
+$container->setAlias('Route', \App\Foo::class);
+dump($container->get('Route'));
 echo $container->get('something');
 
-/*
 dump($container->get(\App\Foo::class));
 dump($container->get(\App\Foo::class));
 dump($container->get(\App\Foo::class));

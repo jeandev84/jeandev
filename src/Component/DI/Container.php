@@ -11,6 +11,8 @@ use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
 
+
+
 /**
  * Class Container
  * @package Jan\Component\DI
@@ -48,6 +50,13 @@ class Container implements \ArrayAccess, ContainerInterface
      * @var array
     */
     protected $instances = [];
+
+
+
+    /**
+     * @var array
+    */
+    protected $aliases = [];
 
 
 
@@ -147,6 +156,17 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
+
+    /**
+     * @param $alias
+     * @param $original
+    */
+    public function setAlias($alias, $original)
+    {
+          $this->aliases[$alias] = $original;
+    }
+
+
     /**
      * @param $abstract
      * @param $concrete
@@ -218,9 +238,7 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function getConcrete($abstract)
     {
-         $concrete = $this->resolveConcrete(
-             $this->bindings[$abstract]['concrete']
-         );
+         $concrete = $this->resolveConcrete($abstract);
 
          if(is_string($concrete))
          {
@@ -269,11 +287,13 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
-     * @param $concrete
+     * @param $abstract
      * @return mixed
     */
-    protected function resolveConcrete($concrete)
+    protected function resolveConcrete($abstract)
     {
+        $concrete = $this->bindings[$abstract]['concrete'];
+
         if($concrete instanceof \Closure)
         {
             return $concrete($this);
@@ -293,10 +313,16 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function resolve($abstract, $arguments = [])
     {
-        if(! class_exists($abstract))
+        if(! isset($this->aliases[$abstract]) && ! class_exists($abstract))
         {
-            return $abstract;
+             return $abstract;
         }
+
+        if(isset($this->aliases[$abstract]))
+        {
+            $abstract = $this->aliases[$abstract];
+        }
+
 
         $reflectedClass = new ReflectionClass($abstract);
 
@@ -406,17 +432,36 @@ class Container implements \ArrayAccess, ContainerInterface
      */
     public function addServiceProvider($provider)
     {
-        if(is_string($provider))
-        {
-            $provider = $this->resolve($provider);
-        }
-
-        if($provider instanceof ServiceProvider)
-        {
-            $this->runServiceProvider($provider);
-        }
+        $this->runServiceProvider(
+            $this->resolveProvider($provider)
+        );
 
         return $this;
+    }
+
+
+    /**
+     * @param $provider
+     * @return bool|ServiceProvider|mixed|object
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+    */
+    protected function resolveProvider($provider)
+    {
+         if(is_string($provider))
+         {
+             $provider = $this->resolve($provider);
+         }
+
+         if(! $provider instanceof ServiceProvider)
+         {
+             throw new ContainerException(
+                 sprintf('Class %s is not instance of ServiceProvider', get_class($provider))
+             );
+         }
+
+         return $provider;
     }
 
 
@@ -437,35 +482,62 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @param ServiceProvider $provider
+     * @throws ContainerException
     */
     public function runServiceProvider(ServiceProvider $provider)
     {
         if(! in_array($provider, $this->providers))
         {
             $provider->setContainer($this);
+
+            if($provides = $provider->getProvides())
+            {
+                foreach ($provides as $provide)
+                {
+                    if(! \array_key_exists($provide, $this->aliases))
+                    {
+                        throw new ContainerException('Can not resolve this alias!');
+                    }
+
+                    //
+                }
+
+                $this->provides[] = $provides;
+            }
+
             $implements = class_implements($provider);
 
             if(isset($implements[BootableServiceProvider::class]))
             {
-                $provider->boot();
+                 /* $provider->boot(); */
+                 $this->call($provider, 'boot');
             }
 
-            if($provides = $provider->getProvides())
-            {
-                $this->provides[] = $provides;
-            }
-
-            $provider->register();
+            /* $provider->register(); */
+            $this->call($provider, 'register');
             $this->providers[] = $provider;
         }
     }
 
 
+    /**
+     * @param object $object $object
+     * @param string $method
+     * @param array $arguments
+    */
+    public function call($object, $method, $arguments = [])
+    {
+         if(is_callable($object, $method))
+         {
+             $object->{$method}(...$arguments);
+         }
+    }
+
 
     /**
      * @param mixed $offset
      * @return bool
-     */
+    */
     public function offsetExists($offset)
     {
         return $this->has($offset);
