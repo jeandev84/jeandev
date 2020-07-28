@@ -364,20 +364,6 @@ class Container implements \ArrayAccess, ContainerInterface
     {
         $abstract = $this->getAlias($abstract);
 
-        /*
-        foreach ($this->getProvides() as $provide)
-        {
-            if(! isset($this->aliases[$provide]))
-            {
-                throw new ContainerException(
-                    sprintf('Can not resolve this alias %s', $provide)
-                );
-            }
-
-            $abstract = $this->aliases[$provide];
-        }
-        */
-
         $reflectedClass = new ReflectionClass($abstract);
 
         if(! $reflectedClass->isInstantiable())
@@ -553,7 +539,20 @@ class Container implements \ArrayAccess, ContainerInterface
 
             if(! \in_array($provider, $this->providers))
             {
-                $this->setProvides($provider->getProvides());
+                if($provides = $provider->getProvides())
+                {
+                    foreach ($provides as $provide)
+                    {
+                        if(! isset($this->aliases[$provide]))
+                        {
+                            throw new ContainerException(
+                                sprintf('Can not resolve this alias %s', $provide)
+                            );
+                        }
+                    }
+
+                    $this->setProvides($provider->getProvides());
+                }
 
                 $implements = class_implements($provider);
                 if(isset($implements[BootableServiceProvider::class]))
@@ -671,7 +670,7 @@ class Container implements \ArrayAccess, ContainerInterface
     /**
      * Boot all calls
     */
-    public function boots()
+    public function calls()
     {
         $bootIds = array_keys($this->getCalls());
 

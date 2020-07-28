@@ -43,14 +43,14 @@ $container->make(\App\Controllers\HomeController::class);
 /*
 Testing Service provider
 */
-$container->bind('bar', new \App\Bar());
+$container->bind(\App\Bar::class, new \App\Bar());
 $container->setAlias('foo', \App\Foo::class);
 
 $container->addServiceProvider(
     new \App\Providers\AppServiceProvider()
 );
 
-dump($container->get('foo'));
+// dump($container->get('foo'));
 
 
 /*
@@ -72,6 +72,6 @@ $container->callAction(\App\Controllers\HomeController::class, 'index', ['slug' 
 // $container->call(new \App\Controllers\HomeController(), 'index', []);
 
 
-$container->boots();
+$container->calls();
 
 dd($container);

@@ -15,9 +15,9 @@ class AppServiceProvider extends ServiceProvider implements BootableServiceProvi
 {
 
     public $provides = [
-      // 'foo',
+       // 'foo',
        //  Foo::class,
-     //   'something'
+      //   'something'
     ];
 
 
