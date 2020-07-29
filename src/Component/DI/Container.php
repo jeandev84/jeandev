@@ -288,6 +288,17 @@ class Container implements \ArrayAccess, ContainerInterface
          }
 
          return $concrete;
+
+         /*
+            $concrete = $this->bindings[$abstract]['concrete'];
+
+            if($concrete instanceof \Closure)
+            {
+                return $concrete($this);
+            }
+
+            return $concrete;
+         */
     }
 
 
