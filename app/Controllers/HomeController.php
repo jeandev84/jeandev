@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use Jan\Component\DI\Contracts\ContainerInterface;
 
+
 /**
  * Class HomeController
  * @package App\Controllers

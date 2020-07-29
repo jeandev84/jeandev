@@ -78,23 +78,6 @@ class Container implements \ArrayAccess, ContainerInterface
     protected $aliases = [];
 
 
-
-    /**
-     * Get container instance
-     *
-     * @return Container
-    */
-    public static function getInstance()
-    {
-         if(is_null(static::$instance))
-         {
-              static::$instance = new static();
-         }
-
-         return static::$instance;
-    }
-
-
     /**
      * @param bool $status
      * @return $this
@@ -109,13 +92,35 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
-     * Determine if id bounded
+     * Determine if id binded
      * @param $id
      * @return bool
     */
-    public function bounded($id)
+    public function binded($id)
     {
         return isset($this->bindings[$id]);
+    }
+
+
+    /**
+     * @param $abstract
+     * @return bool
+    */
+    public function bound($abstract)
+    {
+        return $this->binded($abstract)
+               || $this->hasInstance($abstract)
+               || $this->isAlias($abstract);
+    }
+
+
+    /**
+     * @param $abstract
+     * @return bool
+    */
+    public function hasInstance($abstract)
+    {
+        return isset($this->instances[$abstract]);
     }
 
 
@@ -171,7 +176,7 @@ class Container implements \ArrayAccess, ContainerInterface
      * Set instance
      *
      * @param $abstract
-     * @param $instance
+     * @param object $instance
     */
     public function instance($abstract, $instance)
     {
@@ -180,29 +185,63 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
-     * @param $instance
-     * @throws ContainerException
+     * Get container instance
+     *
+     * @return Container
     */
-    public function setInstance($instance)
+    public static function getInstance()
     {
-        if(! \is_object($instance))
+        if(is_null(static::$instance))
         {
-             throw new ContainerException('Instance must be object!');
+            static::$instance = new static();
         }
 
-        $this->instances[get_class($instance)] = $instance;
+        return static::$instance;
+    }
+
+
+    /**
+     * @param ContainerInterface|null $container
+     * @return ContainerInterface
+    */
+    public static function setInstance(ContainerInterface $container = null)
+    {
+        return static::$instance = $container;
+    }
+
+
+    /**
+     * @param $name
+     * @param $original
+    */
+    public function setAlias($name, $original)
+    {
+          $this->aliases[$name] = $original;
+    }
+
+
+    /**
+     * @param $name
+     * @return bool
+    */
+    public function isAlias($name)
+    {
+        return isset($this->aliases[$name]);
     }
 
 
 
     /**
-     * @param $alias
-     * @param $original
+     * @param array $aliases
     */
-    public function setAlias($alias, $original)
+    public function setAliases(array $aliases)
     {
-          $this->aliases[$alias] = $original;
+        foreach ($aliases as $name => $original)
+        {
+             $this->setAlias($name, $original);
+        }
     }
+
 
 
     /**
@@ -464,12 +503,7 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function has($id)
     {
-        if($this->bounded($id))
-        {
-            return true;
-        }
-
-        return false;
+        return $this->bound($id);
     }
 
 
@@ -588,7 +622,7 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param array $arguments
      * @return Container
     */
-    public function call(string $abstract, string $method, $arguments = [])
+    public function rebootingCall(string $abstract, string $method, $arguments = [])
     {
           $this->calls[$abstract][] = [$abstract, $method, $arguments];
 
@@ -601,7 +635,7 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $abstract
      * @return bool
     */
-    public function isCalled($abstract)
+    public function hasCall($abstract)
     {
         return \array_key_exists($abstract, $this->calls);
     }
@@ -614,7 +648,7 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function getCall($abstract)
     {
-         if($this->isCalled($abstract))
+         if($this->hasCall($abstract))
          {
              return $this->calls[$abstract];
          }
@@ -632,38 +666,56 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
-
     /**
-     * @param $abstract
-     * @param $method
+     * @param $callback
      * @param array $arguments
+     * @param $method
+     * @return mixed
      * @throws ContainerException
      * @throws ReflectionException
      * @throws ResolverDependencyException
-    */
-    public function callAction($abstract, $method, $arguments = [])
+     */
+    public function call($callback, array $arguments = [], $method = null)
     {
-        if(is_object($abstract))
+        if(! \is_callable($callback))
         {
-            $abstract = get_class($abstract);
+            if(is_object($callback))
+            {
+                $callback = get_class($callback);
+            }
+
+            if($this->autowire)
+            {
+                $reflectedMethod = new ReflectionMethod($callback, $method);
+                $arguments = $this->resolveDependencies($reflectedMethod, $arguments);
+            }
+
+            $object = $this->get($callback);
+
+            if(method_exists($object, $method))
+            {
+                $callback = [$object, $method];
+            }
         }
 
-        if($this->autowire)
-        {
-            $reflectedMethod = new ReflectionMethod($abstract, $method);
-            $arguments = $this->resolveDependencies($reflectedMethod, $arguments);
-        }
-
-        $object = $this->get($abstract);
-
-        if(method_exists($object, $method))
-        {
-             call_user_func_array([$object, $method], $arguments);
-
-             /* $object->{$method}(...$arguments); */
-        }
+        return call_user_func_array($callback, $arguments);
     }
 
+
+    /**
+     * @param $callback
+     * @param null $method
+     * @return array|callable
+    */
+    public function resolveCallback($callback, $method = null)
+    {
+        if(is_callable($callback) && ! $method)
+        {
+            return $callback;
+        }
+
+        return [$callback, $method];
+    }
 
     /**
      * @param $id
@@ -762,6 +814,26 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function offsetUnset($offset)
     {
-        unset($this->bindings[$offset]);
+        unset($this->bindings[$offset], $this->instances[$offset]);
+    }
+
+
+    /**
+     * @param $name
+     * @return array|bool|mixed|object|string|null
+    */
+    public function __get($name)
+    {
+        return $this[$name];
+    }
+
+
+    /**
+     * @param $name
+     * @param $value
+    */
+    public function __set($name, $value)
+    {
+        $this[$name] = $value;
     }
 }

@@ -69,7 +69,12 @@ $container->singleton(\Jan\Component\DI\Contracts\ContainerInterface::class, fun
     return new \Jan\Component\DI\Container();
 });
 
-$container->callAction(\App\Controllers\HomeController::class, 'index', ['slug' => 'salut-les-amis', 'id' => 1]);
+$container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index');
+
+$container->call(function () {
+    echo 'Привет';
+});
+
 //$container->boot(\App\Controllers\HomeController::class);
 // $container->call(new \App\Controllers\HomeController(), 'index', []);
 
