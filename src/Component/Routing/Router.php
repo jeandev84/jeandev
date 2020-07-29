@@ -511,7 +511,7 @@ class Router implements RouterInterface
         */
         private function resolveTarget($target)
         {
-            if($namespace = $this->getOption(self::OPTION_PARAM_NAMESPACE))
+            if(is_string($target) && $namespace = $this->getOption(self::OPTION_PARAM_NAMESPACE))
             {
                 $target = rtrim($namespace, '\\') .'\\' . $target;
             }

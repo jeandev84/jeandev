@@ -80,15 +80,13 @@ $container->calls();
 $router = new Router();
 
 $options = [
-    'prefix' => '/admin'
+    'prefix' => '/admin',
+    'namespace' => 'Admin\\'
 ];
 
 $router->group($options, function ($router) {
 
-    $router->map('GET', '/', function () {
-        return 'Welcome';
-    }, 'home');
-
+    $router->map('GET', '/', 'HomeController@index', 'home');
 
     $router->map('GET', '/about', function () {
         return 'About';
@@ -104,5 +102,6 @@ $router->group($options, function ($router) {
 
 
 dump($router->getNamedRoutes());
+dump($router->getRoutes());
 
 dd($container);

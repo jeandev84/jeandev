@@ -181,9 +181,15 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @param $instance
+     * @throws ContainerException
     */
     public function setInstance($instance)
     {
+        if(! \is_object($instance))
+        {
+             throw new ContainerException('Instance must be object!');
+        }
+
         $this->instances[get_class($instance)] = $instance;
     }
 
@@ -357,7 +363,6 @@ class Container implements \ArrayAccess, ContainerInterface
             return $this->aliases[$abstract];
         }
 
-
         return $abstract;
     }
 
@@ -415,7 +420,7 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param array $arguments
      * @return array
      * @throws ReflectionException|ContainerException|ResolverDependencyException
-     */
+    */
     public function resolveDependencies(ReflectionMethod $reflectionMethod, $arguments = [])
     {
         $dependencies = [];
