@@ -76,4 +76,33 @@ $container->callAction(\App\Controllers\HomeController::class, 'index', ['slug' 
 
 $container->calls();
 
+
+$router = new Router();
+
+$options = [
+    'prefix' => '/admin'
+];
+
+$router->group($options, function ($router) {
+
+    $router->map('GET', '/', function () {
+        return 'Welcome';
+    }, 'home');
+
+
+    $router->map('GET', '/about', function () {
+        return 'About';
+    }, 'about');
+
+
+
+    $router->map('GET', '/contact', function () {
+        return 'Contact';
+    });
+
+});
+
+
+dump($router->getNamedRoutes());
+
 dd($container);

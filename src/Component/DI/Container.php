@@ -122,17 +122,17 @@ class Container implements \ArrayAccess, ContainerInterface
     /**
      * @param $abstract
      * @param null $concrete
-     * @param bool $shared
+     * @param bool $singleton
      * @return Container
     */
-    public function bind($abstract, $concrete = null, $shared = false)
+    public function bind($abstract, $concrete = null, bool $singleton = false)
     {
           if(is_null($concrete))
           {
               $concrete = $abstract;
           }
 
-          $this->bindings[$abstract] = compact('concrete', 'shared');
+          $this->bindings[$abstract] = compact('concrete', 'singleton');
 
           return $this;
     }
@@ -308,8 +308,8 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function isSingleton($abstract)
     {
-        return isset($this->bindings[$abstract]['shared'])
-               && $this->bindings[$abstract]['shared'] === true;
+        return isset($this->bindings[$abstract]['singleton'])
+               && $this->bindings[$abstract]['singleton'] === true;
     }
 
 

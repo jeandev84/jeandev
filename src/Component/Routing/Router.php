@@ -193,7 +193,7 @@ class Router implements RouterInterface
       public function group(array $options, Closure $callback)
       {
           $this->options = $options;
-          $callback();
+          $callback($this);
           $this->options = [];
       }
 
@@ -317,7 +317,7 @@ class Router implements RouterInterface
            $route->setDefaultRegex(self::DEFAULT_REGEX_EXPRESSION);
 
            $route->setName(
-               $this->resolveName($name, $route->getPath())
+               $this->resolveName($name, $this->resolvePath($path))
            );
 
            $route->setMiddleware(
