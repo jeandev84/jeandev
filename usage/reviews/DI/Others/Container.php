@@ -134,10 +134,10 @@ class Container implements \ArrayAccess, ContainerInterface
     /**
      * @param $abstract
      * @param null $concrete
-     * @param bool $shared
+     * @param bool $singleton
      * @return Container
     */
-    public function bind($abstract, $concrete = null, bool $shared = false)
+    public function bind($abstract, $concrete = null, bool $singleton = false)
     {
           if(is_null($concrete))
           {
@@ -149,7 +149,7 @@ class Container implements \ArrayAccess, ContainerInterface
                $concrete =  $concrete($this);
           }
 
-          $this->bindings[$abstract] = compact('concrete', 'shared');
+          $this->bindings[$abstract] = compact('concrete', 'singleton');
 
           return $this;
     }
@@ -175,9 +175,9 @@ class Container implements \ArrayAccess, ContainerInterface
     {
         foreach ($configs as $config)
         {
-            list($abstract, $concrete, $shared) = $config;
+            list($abstract, $concrete, $singleton) = $config;
 
-            $this->bind($abstract, $concrete, $shared);
+            $this->bind($abstract, $concrete, $singleton);
         }
 
         return $this;
@@ -230,22 +230,6 @@ class Container implements \ArrayAccess, ContainerInterface
     {
           $this->aliases[$name] = $original;
     }
-
-
-    /**
-     * @param $abstract
-     * @return mixed
-     */
-    public function getAlias($abstract)
-    {
-        if(isset($this->aliases[$abstract]))
-        {
-            return $this->aliases[$abstract];
-        }
-
-        return $abstract;
-    }
-
 
 
     /**
@@ -325,7 +309,7 @@ class Container implements \ArrayAccess, ContainerInterface
     public function get($abstract, $arguments = [])
     {
         // if has concrete
-        if($this->hasConcrete($abstract))
+        if($this->has($abstract))
         {
             // get concrete
             return $this->getConcrete($abstract);
@@ -342,10 +326,20 @@ class Container implements \ArrayAccess, ContainerInterface
     public function hasConcrete($abstract)
     {
         return isset($this->bindings[$abstract])
-               && isset($this->bindings[$abstract]['concrete'])
-               || ! isset($this->instances[$abstract]);
+               && isset($this->bindings[$abstract]['concrete']) && ! isset($this->instances[$abstract]);
     }
 
+
+    /**
+     * @param $abstract
+    */
+    public function resolveConcrete($abstract)
+    {
+         if($this->hasConcrete($abstract))
+         {
+
+         }
+    }
 
 
     /**
@@ -359,14 +353,19 @@ class Container implements \ArrayAccess, ContainerInterface
     {
          $concrete = $this->bindings[$abstract]['concrete'];
 
-         if(class_exists($concrete))
+         if(is_string($concrete))
          {
-             $concrete = $this->resolve($concrete);
+             if(! isset($this->instances[$concrete]))
+             {
+                 return $this->resolve($concrete);
+             }
+
+             return $this->instances[$concrete];
          }
 
          if($this->isSingleton($abstract))
          {
-              return $this->share($abstract, $concrete);
+              return $this->getSingleton($abstract, $concrete);
          }
 
          return $concrete;
@@ -379,8 +378,8 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function isSingleton($abstract)
     {
-        return isset($this->bindings[$abstract]['shared'])
-               && $this->bindings[$abstract]['shared'] === true;
+        return isset($this->bindings[$abstract]['singleton'])
+               && $this->bindings[$abstract]['singleton'] === true;
     }
 
 
@@ -389,7 +388,7 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $concrete
      * @return mixed
     */
-    public function share($abstract, $concrete)
+    public function getSingleton($abstract, $concrete)
     {
          if(! isset($this->instances[$abstract]))
          {
@@ -399,6 +398,20 @@ class Container implements \ArrayAccess, ContainerInterface
          return $this->instances[$abstract];
     }
 
+
+    /**
+     * @param $abstract
+     * @return mixed
+    */
+    public function getAlias($abstract)
+    {
+        if(isset($this->aliases[$abstract]))
+        {
+            return $this->aliases[$abstract];
+        }
+
+        return $abstract;
+    }
 
 
 
@@ -413,12 +426,6 @@ class Container implements \ArrayAccess, ContainerInterface
     public function resolve($abstract, $arguments = [])
     {
         $abstract = $this->getAlias($abstract);
-
-        if($this->hasInstance($abstract))
-        {
-            return $this->instances[$abstract];
-        }
-
 
         $reflectedClass = new ReflectionClass($abstract);
 
