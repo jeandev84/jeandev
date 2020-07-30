@@ -125,10 +125,12 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $abstract
      * @return bool
     */
-    public function hasInstance($abstract)
+    public function isResolved($abstract)
     {
-        return isset($this->instances[$abstract]);
+        return isset($this->resolved[$abstract])
+               || isset($this->instances[$abstract]);
     }
+
 
 
     /**
@@ -425,7 +427,7 @@ class Container implements \ArrayAccess, ContainerInterface
     {
         $abstract = $this->getAlias($abstract);
 
-        if($this->hasInstance($abstract))
+        if($this->isResolved($abstract))
         {
             return $this->instances[$abstract];
         }
@@ -439,10 +441,10 @@ class Container implements \ArrayAccess, ContainerInterface
             );
         }
 
-        $instance = $this->resolveInstance($reflectedClass, $arguments);
+        $instance = $this->makeInstance($reflectedClass, $arguments);
         return $this->instances[$abstract] = $this->resolved[$abstract] = $instance;
-
     }
+
 
 
     /**
@@ -453,7 +455,7 @@ class Container implements \ArrayAccess, ContainerInterface
      * @throws ReflectionException
      * @throws ResolverDependencyException
     */
-    protected function resolveInstance(ReflectionClass $reflectedClass, $arguments = [])
+    protected function makeInstance(ReflectionClass $reflectedClass, $arguments = [])
     {
         if(! $constructor = $reflectedClass->getConstructor())
         {
