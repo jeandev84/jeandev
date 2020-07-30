@@ -20,11 +20,17 @@ class HomeController
      * HomeController constructor.
      * @param ContainerInterface $container
    */
-   public function __construct(ContainerInterface $container)
+   public function __construct(ContainerInterface $container = null, $slug = null, $id = null)
    {
         $this->container = $container;
    }
 
+
+   /**
+    * @param ContainerInterface $container
+    * @param $slug
+    * @param $id
+   */
    public function index(ContainerInterface $container, $slug, $id)
    {
        // dump($this->container);

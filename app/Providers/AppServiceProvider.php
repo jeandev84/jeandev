@@ -28,6 +28,7 @@ class AppServiceProvider extends ServiceProvider implements BootableServiceProvi
         });
     }
 
+
     public function boot()
     {
         // do nothing

@@ -77,13 +77,15 @@ $container->call(function () {
 
 
 $container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index');
+$container->callMethod(\App\Controllers\HomeController::class,  ['slug' => 'salut-les-amis', 'id' => 1], 'index');
+
 
 /*
-$container->callMethod(\App\Controllers\HomeController::class, 'index', ['slug' => 'salut-les-amis', 'id' => 1]);
-$container->bootCalledMethod(\App\Controllers\HomeController::class);
+$container->bootCallMethod(\App\Controllers\HomeController::class);
+$container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index');
 */
 
-/* $container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index'); */
+$container->bootCallMethods();
 
 dump($container->getCalls());
 dd($container);

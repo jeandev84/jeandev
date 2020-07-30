@@ -313,6 +313,29 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @param $abstract
+     * @return bool
+    */
+    public function hasConcrete($abstract)
+    {
+        return isset($this->bindings[$abstract])
+               && isset($this->bindings[$abstract]['concrete']);
+    }
+
+
+    /**
+     * @param $abstract
+    */
+    public function resolveConcrete($abstract)
+    {
+         if($this->hasConcrete($abstract))
+         {
+
+         }
+    }
+
+
+    /**
+     * @param $abstract
      * @return mixed
      * @throws ContainerException
      * @throws ReflectionException
@@ -499,9 +522,19 @@ class Container implements \ArrayAccess, ContainerInterface
      */
     public function addServiceProvider($provider)
     {
-        $this->runServiceProvider(
-            $this->resolveProvider($provider)
-        );
+        if(is_string($provider))
+        {
+            $provider = $this->resolve($provider);
+        }
+
+        if(! $provider instanceof ServiceProvider)
+        {
+            throw new ContainerException(
+                sprintf('Class %s is not instance of ServiceProvider', get_class($provider))
+            );
+        }
+        
+        $this->runServiceProvider($provider);
 
         return $this;
     }
@@ -523,10 +556,11 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
+
     /**
      * @param ServiceProvider $serviceProvider
      * @return array
-     */
+    */
     public function getServiceProvides(ServiceProvider $serviceProvider)
     {
          return $serviceProvider->getProvides();
@@ -561,47 +595,48 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function runServiceProvider(ServiceProvider $provider)
     {
-            $provider->setContainer($this);
-            $abstract = get_class($provider);
+        $provider->setContainer($this);
+        $abstract = get_class($provider);
 
-            if(! \in_array($provider, $this->providers))
+        if(! \in_array($provider, $this->providers))
+        {
+            if($provides = $provider->getProvides())
             {
-                if($provides = $provider->getProvides())
+                foreach ($provides as $provide)
                 {
-                    foreach ($provides as $provide)
+                    if(! isset($this->aliases[$provide]))
                     {
-                        if(! isset($this->aliases[$provide]))
-                        {
-                            throw new ContainerException(
-                                sprintf('Can not resolve this alias %s', $provide)
-                            );
-                        }
+                        throw new ContainerException(
+                            sprintf('Can not resolve this alias %s', $provide)
+                        );
                     }
-
-                    $this->setProvides($provider->getProvides());
                 }
 
-                $implements = class_implements($provider);
-                if(isset($implements[BootableServiceProvider::class]))
-                {
-                     $provider->boot();
-                }
-
-                $provider->register();
-                $this->providers[] = $provider;
+                $this->setProvides($provider->getProvides());
             }
+
+            $implements = class_implements($provider);
+            if(isset($implements[BootableServiceProvider::class]))
+            {
+                 $provider->boot();
+            }
+
+            $provider->register();
+            $this->providers[] = $provider;
+        }
     }
 
 
+
     /**
-     * @param $callback
+     * @param $abstract
      * @param array $arguments
      * @param $method
      * @return mixed
      * @throws ContainerException
      * @throws ReflectionException
      * @throws ResolverDependencyException
-     */
+    */
     public function call($abstract, array $arguments = [], $method = null)
     {
         if(! \is_callable($abstract))
@@ -625,7 +660,10 @@ class Container implements \ArrayAccess, ContainerInterface
             }
         }
 
-        return call_user_func_array($abstract, $arguments);
+        if(! $method)
+        {
+            return call_user_func_array($abstract, $arguments);
+        }
     }
 
 
@@ -634,10 +672,11 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $abstract
      * @return bool
      */
-    public function called($abstract)
+    public function isCall(string $abstract)
     {
         return isset($this->calls[$abstract]);
     }
+
 
 
     /**
@@ -645,10 +684,10 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $method
      * @param array $arguments
      * @return $this
-     */
-    public function callMethod($abstract, $method, $arguments = [])
+    */
+    public function callMethod($abstract, $arguments = [], $method = null)
     {
-        $this->calls[$abstract][] = [$abstract, $method, $arguments];
+        $this->calls[$abstract][] = [$abstract, $arguments, $method];
 
         return $this;
     }
@@ -658,9 +697,9 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $abstract
      * @return array|mixed
     */
-    public function getCalledMethod($abstract)
+    public function getCallMethod($abstract)
     {
-        if($this->called($abstract))
+        if($this->isCall($abstract))
         {
             return $this->calls[$abstract];
         }
@@ -669,19 +708,41 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
-
     /**
      * Boot calls method
+     * @param string $id
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
     */
-    public function bootCalledMethod($id)
+    public function bootCallMethod(string $id)
     {
-       $callbackParams = $this->getCalledMethod($id);
+       $callbackParams = $this->getCallMethod($id);
 
-       foreach ($callbackParams as $callback)
+       if($callbackParams)
        {
-           list($abstract, $method, $parameters) = $callback;
-           $this->call($abstract, $parameters, $method);
+           foreach ($callbackParams as $callback)
+           {
+               list($abstract, $parameters, $method) = $callback;
+               $this->call($abstract, $parameters, $method);
+           }
        }
+    }
+
+
+    /**
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+    */
+    public function bootCallMethods()
+    {
+        $calledMethods = $this->getCalls();
+
+        foreach (array_keys($calledMethods) as $id)
+        {
+             $this->bootCallMethod($id);
+        }
     }
 
 
@@ -692,60 +753,6 @@ class Container implements \ArrayAccess, ContainerInterface
     {
         return $this->calls;
     }
-
-
-
-    /**
-     * Boot all calls
-    */
-    /*
-    public function calls()
-    {
-        $bootIds = array_keys($this->getCalls());
-
-        foreach ($bootIds as $id)
-        {
-            $this->boot($id);
-        }
-    }
-
-
-    public function boot($id)
-    {
-        foreach ($this->getCalls($id) as $call)
-        {
-            list($abstract, $method, $arguments) = $call;
-
-            $this->call($abstract, $method, $arguments);
-        }
-    }
-    */
-
-
-    /**
-     * @param $provider
-     * @return bool|ServiceProvider|mixed|object
-     * @throws ContainerException
-     * @throws ReflectionException
-     * @throws ResolverDependencyException
-    */
-    private function resolveProvider($provider)
-    {
-        if(is_string($provider))
-        {
-            $provider = $this->resolve($provider);
-        }
-
-        if(! $provider instanceof ServiceProvider)
-        {
-            throw new ContainerException(
-                sprintf('Class %s is not instance of ServiceProvider', get_class($provider))
-            );
-        }
-
-        return $provider;
-    }
-
 
 
     /**
