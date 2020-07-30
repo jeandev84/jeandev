@@ -46,8 +46,10 @@ $container->bind(\App\Bar::class, new \App\Bar());
 $container->setAlias('foo', \App\Foo::class);
 */
 
-$container->singleton(\App\Foo::class, \App\Foo::class);
+// $container->bind(\App\Bar::class, new \App\Bar());
+// $container->singleton(\App\Foo::class, \App\Foo::class);
 
+dd($container->get(\App\Foo::class));
 /*
 dd($container->get(\App\Foo::class));
 $container->addServiceProvider(

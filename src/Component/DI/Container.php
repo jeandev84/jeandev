@@ -342,8 +342,7 @@ class Container implements \ArrayAccess, ContainerInterface
     public function hasConcrete($abstract)
     {
         return isset($this->bindings[$abstract])
-               && isset($this->bindings[$abstract]['concrete'])
-               || ! isset($this->instances[$abstract]);
+               && isset($this->bindings[$abstract]['concrete']);
     }
 
 
@@ -359,7 +358,7 @@ class Container implements \ArrayAccess, ContainerInterface
     {
          $concrete = $this->bindings[$abstract]['concrete'];
 
-         if(class_exists($concrete))
+         if($this->isResolvable($concrete))
          {
              $concrete = $this->resolve($concrete);
          }
@@ -371,6 +370,18 @@ class Container implements \ArrayAccess, ContainerInterface
 
          return $concrete;
     }
+
+
+    /**
+     * @param $concrete
+     * @return bool
+    */
+    public function isResolvable($concrete)
+    {
+        return is_string($concrete)
+               && class_exists($concrete);
+    }
+
 
 
     /**
@@ -419,7 +430,6 @@ class Container implements \ArrayAccess, ContainerInterface
             return $this->instances[$abstract];
         }
 
-
         $reflectedClass = new ReflectionClass($abstract);
 
         if(! $reflectedClass->isInstantiable())
@@ -430,6 +440,7 @@ class Container implements \ArrayAccess, ContainerInterface
         }
 
         return $this->instances[$abstract] = $this->resolveInstance($reflectedClass, $arguments);
+
     }
 
 
