@@ -79,7 +79,10 @@ $container->call(function () {
 
 
 $container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index');
-$container->callMethod(\App\Controllers\HomeController::class,  ['slug' => 'salut-les-amis', 'id' => 1], 'index');
+$container->feedBack(\App\Controllers\HomeController::class,  ['slug' => 'salut-les-amis', 'id' => 1], 'index');
+$container->closure('web', function () {
+    echo 'Hello my web closure!';
+});
 
 
 /*
@@ -87,7 +90,7 @@ $container->bootCallMethod(\App\Controllers\HomeController::class);
 $container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index');
 */
 
-$container->bootCallMethods();
+$container->calling();
 
 dump($container->getCalls());
 dd($container);
