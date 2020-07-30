@@ -137,6 +137,11 @@ class Container implements \ArrayAccess, ContainerInterface
               $concrete = $abstract;
           }
 
+          if($concrete instanceof \Closure)
+          {
+               $concrete =  $concrete($this);
+          }
+
           $this->bindings[$abstract] = compact('concrete', 'singleton');
 
           return $this;
@@ -260,26 +265,26 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $abstract
      * @param array $parameters
      * @return object
-     * @throws ContainerException
-     * @throws ReflectionException
-     * @throws ResolverDependencyException
     */
     public function make($abstract, $parameters = [])
     {
-        return $this->resolve($abstract, $parameters);
+        return function () use ($abstract, $parameters) {
+
+             return $this->resolve($abstract, $parameters);
+        };
     }
 
 
     /**
      * @param $abstract
      * @return bool|object
-     * @throws ContainerException
-     * @throws ReflectionException
-     * @throws ResolverDependencyException
     */
     public function factory($abstract)
     {
-        return $this->make($abstract);
+        return function () use ($abstract) {
+
+            return $this->make($abstract);
+        };
     }
 
 
@@ -315,7 +320,7 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function getConcrete($abstract)
     {
-         $concrete = $this->resolveConcrete($abstract);
+         $concrete = $this->bindings[$abstract]['concrete'];
 
          if(is_string($concrete))
          {
@@ -360,23 +365,6 @@ class Container implements \ArrayAccess, ContainerInterface
          }
 
          return $this->instances[$abstract];
-    }
-
-
-    /**
-     * @param $abstract
-     * @return mixed
-    */
-    protected function resolveConcrete($abstract)
-    {
-        $concrete = $this->bindings[$abstract]['concrete'];
-
-        if($concrete instanceof \Closure)
-        {
-            return $concrete($this);
-        }
-
-        return $concrete;
     }
 
 
@@ -606,16 +594,38 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
-     * @param string $abstract
-     * @param string $method
+     * @param $callback
      * @param array $arguments
-     * @return Container
-    */
-    public function rebootingCall(string $abstract, string $method, $arguments = [])
+     * @param $method
+     * @return mixed
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+     */
+    public function call($abstract, array $arguments = [], $method = null)
     {
-          $this->calls[$abstract][] = [$abstract, $method, $arguments];
+        if(! \is_callable($abstract))
+        {
+            if(is_object($abstract))
+            {
+                $abstract = get_class($abstract);
+            }
 
-          return $this;
+            if($this->autowire)
+            {
+                $reflectedMethod = new ReflectionMethod($abstract, $method);
+                $arguments = $this->resolveDependencies($reflectedMethod, $arguments);
+            }
+
+            $object = $this->get($abstract);
+
+            if(method_exists($object, $method))
+            {
+                return call_user_func_array([$object, $method], $arguments);
+            }
+        }
+
+        return call_user_func_array($abstract, $arguments);
     }
 
 
@@ -623,26 +633,55 @@ class Container implements \ArrayAccess, ContainerInterface
     /**
      * @param $abstract
      * @return bool
-    */
-    public function hasCall($abstract)
+     */
+    public function called($abstract)
     {
-        return \array_key_exists($abstract, $this->calls);
+        return isset($this->calls[$abstract]);
+    }
+
+
+    /**
+     * @param $abstract
+     * @param $method
+     * @param array $arguments
+     * @return $this
+     */
+    public function callMethod($abstract, $method, $arguments = [])
+    {
+        $this->calls[$abstract][] = [$abstract, $method, $arguments];
+
+        return $this;
+    }
+
+
+    /**
+     * @param $abstract
+     * @return array|mixed
+    */
+    public function getCalledMethod($abstract)
+    {
+        if($this->called($abstract))
+        {
+            return $this->calls[$abstract];
+        }
+
+        return [];
     }
 
 
 
     /**
-     * @param null $abstract
-     * @return array|mixed
+     * Boot calls method
     */
-    public function getCall($abstract)
+    public function bootCalledMethod($id)
     {
-         if($this->hasCall($abstract))
-         {
-             return $this->calls[$abstract];
-         }
+       $callbackParams = $this->getCalledMethod($id);
 
-         return [];
+       foreach ($callbackParams as $callback)
+       {
+           list($abstract, $method, $parameters) = $callback;
+           $this->call($abstract, $parameters, $method);
+       }
     }
 
 
@@ -655,78 +694,11 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
-    /**
-     * @param $callback
-     * @param array $arguments
-     * @param $method
-     * @return mixed
-     * @throws ContainerException
-     * @throws ReflectionException
-     * @throws ResolverDependencyException
-     */
-    public function call($callback, array $arguments = [], $method = null)
-    {
-        if(! \is_callable($callback))
-        {
-            if(is_object($callback))
-            {
-                $callback = get_class($callback);
-            }
-
-            if($this->autowire)
-            {
-                $reflectedMethod = new ReflectionMethod($callback, $method);
-                $arguments = $this->resolveDependencies($reflectedMethod, $arguments);
-            }
-
-            $object = $this->get($callback);
-
-            if(method_exists($object, $method))
-            {
-                $callback = [$object, $method];
-            }
-        }
-
-        return call_user_func_array($callback, $arguments);
-    }
-
-
-    /**
-     * @param $callback
-     * @param null $method
-     * @return array|callable
-    */
-    public function resolveCallback($callback, $method = null)
-    {
-        if(is_callable($callback) && ! $method)
-        {
-            return $callback;
-        }
-
-        return [$callback, $method];
-    }
-
-    /**
-     * @param $id
-     * @throws ContainerException
-     * @throws ReflectionException
-     * @throws ResolverDependencyException
-    */
-    public function boot($id)
-    {
-        foreach ($this->getCall($id) as $call)
-        {
-            list($abstract, $method, $arguments) = $call;
-
-            $this->callAction($abstract, $method, $arguments);
-        }
-    }
-
-
 
     /**
      * Boot all calls
     */
+    /*
     public function calls()
     {
         $bootIds = array_keys($this->getCalls());
@@ -738,6 +710,16 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
+    public function boot($id)
+    {
+        foreach ($this->getCalls($id) as $call)
+        {
+            list($abstract, $method, $arguments) = $call;
+
+            $this->call($abstract, $method, $arguments);
+        }
+    }
+    */
 
 
     /**

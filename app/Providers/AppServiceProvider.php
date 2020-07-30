@@ -30,6 +30,6 @@ class AppServiceProvider extends ServiceProvider implements BootableServiceProvi
 
     public function boot()
     {
-        // so nothing
+        // do nothing
     }
 }

@@ -28,7 +28,7 @@ class HomeController
    public function index(ContainerInterface $container, $slug, $id)
    {
        // dump($this->container);
-       dump($slug, $id);
+       // dump($slug, $id);
        dump(__METHOD__);
    }
 

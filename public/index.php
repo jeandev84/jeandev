@@ -42,44 +42,48 @@ $container->make(\App\Controllers\HomeController::class);
 
 /*
 Testing Service provider
-*/
 $container->bind(\App\Bar::class, new \App\Bar());
-// $container->setAlias('foo', \App\Foo::class);
-$container->singleton(\App\Foo::class, \App\Foo::class);
-/* dd($container->get(\App\Foo::class)); */
+$container->setAlias('foo', \App\Foo::class);
+*/
 
+$container->singleton(\App\Foo::class, \App\Foo::class);
+
+/*
+dd($container->get(\App\Foo::class));
 $container->addServiceProvider(
     new \App\Providers\AppServiceProvider()
 );
 
-// dump($container->get('foo'));
+dump($container->get('foo'));
 
 
-/*
 Testing call method
 $person = new \App\Person();
 $container->call($person, 'setName', ['Жан-Клод', 'jeanyao@ymail.com']);
 dump($person->getName(), $person->getEmail());
+$container->autowire(false);
 */
 
-
-//$container->autowire(false);
 $container->singleton(\Jan\Component\DI\Contracts\ContainerInterface::class, function () {
-
     return new \Jan\Component\DI\Container();
 });
 
-$container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index');
+/* $container->singleton(\App\Foo::class, \App\Foo::class); */
+/* $container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index'); */
 
 $container->call(function () {
     echo 'Привет';
 });
 
-//$container->boot(\App\Controllers\HomeController::class);
-// $container->call(new \App\Controllers\HomeController(), 'index', []);
 
+$container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index');
 
-$container->calls();
+/*
+$container->callMethod(\App\Controllers\HomeController::class, 'index', ['slug' => 'salut-les-amis', 'id' => 1]);
+$container->bootCalledMethod(\App\Controllers\HomeController::class);
+*/
 
+/* $container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index'); */
 
+dump($container->getCalls());
 dd($container);
