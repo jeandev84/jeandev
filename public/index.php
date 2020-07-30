@@ -49,7 +49,7 @@ $container->setAlias('foo', \App\Foo::class);
 // $container->bind(\App\Bar::class, new \App\Bar());
 // $container->singleton(\App\Foo::class, \App\Foo::class);
 
-dd($container->get(\App\Foo::class));
+dump($container->get(\App\Foo::class));
 /*
 dd($container->get(\App\Foo::class));
 $container->addServiceProvider(
@@ -87,7 +87,7 @@ $container->bootCallMethod(\App\Controllers\HomeController::class);
 $container->call(\App\Controllers\HomeController::class, ['slug' => 'salut-les-amis', 'id' => 1], 'index');
 */
 
-$container->bootCallMethods();
+// $container->bootCallMethods();
 
 dump($container->getCalls());
 dd($container);

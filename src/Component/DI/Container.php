@@ -439,7 +439,8 @@ class Container implements \ArrayAccess, ContainerInterface
             );
         }
 
-        return $this->instances[$abstract] = $this->resolveInstance($reflectedClass, $arguments);
+        $instance = $this->resolveInstance($reflectedClass, $arguments);
+        return $this->instances[$abstract] = $this->resolved[$abstract] = $instance;
 
     }
 
