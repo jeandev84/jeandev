@@ -144,4 +144,9 @@ class Response implements ResponseInterface
      {
 
      }
+
+    public function withStatus($status)
+    {
+        // TODO: Implement withStatus() method.
+    }
 }

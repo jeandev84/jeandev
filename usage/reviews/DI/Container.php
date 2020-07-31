@@ -325,11 +325,13 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $abstract
      * @param array $parameters
      * @return object
-     * @throws ReflectionException
     */
     public function make($abstract, $parameters = [])
     {
-         return $this->resolve($abstract, $parameters);
+         return function () use ($abstract, $parameters) {
+
+             return $this->resolve($abstract, $parameters);
+         };
     }
 
 

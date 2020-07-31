@@ -15,23 +15,24 @@ class Request implements RequestInterface
     {
     }
 
+
     public function getQueryParams()
     {
-        // TODO: Implement getQueryParams() method.
+        return $_GET;
     }
 
     public function getMethod()
     {
-        // TODO: Implement getMethod() method.
+         return $_SERVER['REQUEST_METHOD'];
     }
 
     public function getUri()
     {
-        // TODO: Implement getUri() method.
+        return $_SERVER['REQUEST_URI'];
     }
 
     public function getParsedBody()
     {
-        // TODO: Implement getParsedBody() method.
+        return 'Content';
     }
 }
