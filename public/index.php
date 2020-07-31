@@ -13,10 +13,15 @@ $container = new \Jan\Component\DI\Container();
 $container->bind('pipe', 'some pipe');
 
 $container->instance(\Jan\Component\DI\Container::class, $container); /* recommended */
-
 $container->singleton(\App\Foo::class, \App\Foo::class);
-
 $container->get(\App\Foo::class);
+
+/*
+dump($container->get(\App\Foo::class));
+dump($container->get(\App\Foo::class));
+dump($container->get(\App\Foo::class));
+*/
+
 $container->bind('something', 'Hello! Friend');
 dump($container->get('something'));
 
@@ -27,7 +32,7 @@ dump($container->make(\Jan\Component\DI\Container::class));
 
 dump($container->get(\Jan\Component\DI\Container::class));
 
-
+dd('End');
 echo 'C1';
 //dump($c);
 //dump($c);

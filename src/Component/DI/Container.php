@@ -93,10 +93,7 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function bind($abstract, $concrete = null, bool $shared = false)
     {
-          if(is_null($concrete))
-          {
-              $concrete = $abstract;
-          }
+          $concrete = $this->resolveConcrete($concrete, $abstract);
 
           $this->bindings[$abstract] = compact('concrete', 'shared');
 
@@ -347,7 +344,8 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function getConcrete($abstract)
     {
-        $concrete = $this->resolving($this->bindings[$abstract]['concrete']);
+
+         $concrete = $this->bindings[$abstract]['concrete'];
 
          if($this->isSingleton($abstract))
          {
@@ -361,13 +359,19 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @param $concrete
+     * @param null $default
      * @return mixed
      * @throws ContainerException
      * @throws ReflectionException
      * @throws ResolverDependencyException
     */
-    public function resolving($concrete)
+    public function resolveConcrete($concrete, $default = null)
     {
+        if(is_null($concrete))
+        {
+            return $default;
+        }
+
         if($this->isClosure($concrete))
         {
             return $this->getClosure($concrete);
@@ -425,21 +429,15 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function share($abstract, $concrete)
     {
-        return $this->instances[$abstract] = function () use ($abstract, $concrete){
+        return $this->instances[$abstract] = (function () use ($abstract, $concrete){
 
              if(! isset($this->shared[$abstract]))
              {
-                 $this->shared[$abstract] = $concrete;
-
-                 if($this->isClosure($concrete))
-                 {
-                     $dependencies = $this->resolveClosureDependencies($concrete);
-                     $this->shared[$abstract] = $concrete(...$dependencies);
-                 }
+                 $this->shared[$abstract] = $this->resolveConcrete($concrete);
              }
 
              return $this->shared[$abstract];
-        };
+        })();
     }
 
 
@@ -491,9 +489,12 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     protected function makeInstance($abstract, $arguments = [])
     {
-        if(! isset($this->resolved[$abstract]))
+        if(isset($this->instances[$abstract]))
         {
-             //dump($abstract);
+             if (! $this->isResolved($abstract))
+             {
+                 return $this->instances[$abstract];
+             }
         }
 
         $reflectedClass = new ReflectionClass($abstract);
