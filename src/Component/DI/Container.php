@@ -114,26 +114,13 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
-
     /**
-     * Determine if id binded
      * @param $id
      * @return bool
-     */
-    public function binded($id)
+    */
+    public function bound($id)
     {
         return isset($this->bindings[$id]);
-    }
-
-
-
-    /**
-     * @param $abstract
-     * @return bool
-     */
-    public function bound($abstract)
-    {
-        return isset($this->bindings[$abstract]);
     }
 
 
@@ -293,7 +280,7 @@ class Container implements \ArrayAccess, ContainerInterface
     {
         return (function () use ($abstract, $parameters) {
 
-            return $this->resolve($abstract, $parameters);
+            return $this->resolveInstance($abstract, $parameters);
 
         })();
     }
@@ -407,8 +394,7 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function isSingleton($abstract)
     {
-        return $this->isShared($abstract)
-               && $this->bindings[$abstract]['shared'] === true;
+        return $this->isShared($abstract) && $this->bindings[$abstract]['shared'] === true;
     }
 
 
@@ -442,26 +428,6 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
 
-
-    /**
-     * @param $abstract
-     * @param $concrete
-     * @return mixed
-    */
-    /*
-    protected function getSingleton($abstract, $concrete)
-    {
-         if(! isset($this->instances[$abstract]))
-         {
-             $this->instances[$abstract] = $concrete;
-         }
-
-         return $this->instances[$abstract];
-    }
-   */
-
-
-
     /**
      * @param $abstract
      * @param $arguments
@@ -474,7 +440,18 @@ class Container implements \ArrayAccess, ContainerInterface
     {
         $abstract = $this->getAlias($abstract);
 
-        return $this->resolved[$abstract] = $this->makeInstance($abstract, $arguments);
+        if(isset($this->instances[$abstract]))
+        {
+            return $this->instances[$abstract];
+        }
+
+        if(isset($this->resolved[$abstract]))
+        {
+            return $this->resolved[$abstract];
+        }
+
+
+        return $this->resolved[$abstract] = $this->resolveInstance($abstract, $arguments);
     }
 
 
@@ -487,16 +464,8 @@ class Container implements \ArrayAccess, ContainerInterface
      * @throws ReflectionException
      * @throws ResolverDependencyException
     */
-    protected function makeInstance($abstract, $arguments = [])
+    protected function resolveInstance($abstract, $arguments = [])
     {
-        if(isset($this->instances[$abstract]))
-        {
-             if (! $this->isResolved($abstract))
-             {
-                 return $this->instances[$abstract];
-             }
-        }
-
         $reflectedClass = new ReflectionClass($abstract);
 
         if(! $reflectedClass->isInstantiable())
