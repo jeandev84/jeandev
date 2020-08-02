@@ -512,6 +512,7 @@ class Router implements RouterInterface
         /**
          * @param $path
          * @return string
+         * @throws RouterException
         */
         private function resolvePath(string $path)
         {
@@ -527,12 +528,16 @@ class Router implements RouterInterface
         /**
          * @param $target
          * @return string
+         * @throws RouterException
         */
         private function resolveTarget($target)
         {
-            if(is_string($target) && $namespace = $this->getOption(self::OPTION_PARAM_NAMESPACE))
+            if(is_string($target))
             {
-                $target = rtrim($namespace, '\\') .'\\' . $target;
+                if($namespace = $this->getOption(self::OPTION_PARAM_NAMESPACE))
+                {
+                    $target = rtrim($namespace, '\\') .'\\' . $target;
+                }
             }
 
             return $target;
@@ -560,6 +565,27 @@ class Router implements RouterInterface
 
             return (string) $name;
         }
+
+
+        /**
+         * add options
+         *
+         * @param array $options
+        */
+        private function addOptions(array $options)
+        {
+            $this->options = $options;
+        }
+
+
+        /**
+         * flush options
+        */
+        private function flushOptions()
+        {
+            $this->options = [];
+        }
+
 
 
         /**

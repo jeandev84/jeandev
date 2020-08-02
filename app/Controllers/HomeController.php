@@ -16,11 +16,11 @@ class HomeController
    protected $container;
 
 
-   /**
+    /**
      * HomeController constructor.
-     * @param ContainerInterface $container
+     * @param ContainerInterface|null $container
    */
-   public function __construct(ContainerInterface $container = null, $slug = null, $id = null)
+   public function __construct(ContainerInterface $container = null)
    {
         $this->container = $container;
    }
@@ -35,6 +35,7 @@ class HomeController
    {
        // dump($this->container);
        // dump($slug, $id);
+       dump($this->container);
        dump(__METHOD__);
    }
 
