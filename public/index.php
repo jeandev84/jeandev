@@ -10,14 +10,19 @@ require_once __DIR__.'/../vendor/autoload.php';
 
 $container = new \Jan\Component\DI\Container();
 
-$container->bind('db', 'some database');
+$container->bind('single');
+$container->bind('something', 'do somethings');
+$container->bind('foo', 'Foo');
+$container->bind('test', function () {
+    return 'Test';
+});
 
-dd($container->get('db'));
+dump($container->get('something'));
+dump($container->get('test'));
 
 /*
-$container->instance(\Jan\Component\DI\Container::class, $container);
-$container->singleton(\App\Foo::class, \App\Foo::class);
-
-$container->calling();
-dd($container);
+$container->instance(\App\Person::class, new \App\Person());
+dump($container->has(App\Person::class));
 */
+
+dd($container);

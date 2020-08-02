@@ -5,68 +5,77 @@ namespace App;
 /**
  * Class Person
  * @package App
- */
+*/
 class Person
 {
 
-    /**
-     * @var string
-    */
-    private $name;
+     /**
+      * @var string
+     */
+     private $name;
 
 
-    /**
-     * @var string
-    */
-    private $email;
+
+     /**
+      * @var string
+     */
+     private $email;
 
 
-    /**
+
+     /**
       * Person constructor.
       * @param $name
       * @param $email
      */
      public function __construct($name = null, $email = null)
      {
-
+          $this->setName($name);
+          $this->setEmail($email);
      }
 
-    /**
-     * @return string
+
+
+     /**
+      * @return null|string
      */
-    public function getName(): string
-    {
+     public function getName(): ?string
+     {
         return $this->name;
-    }
+     }
 
-    /**
-     * @param string $name
-     * @return Person
+
+
+     /**
+      * @param null|string $name
+      * @return Person
      */
-    public function setName(string $name, string $email): Person
-    {
+     public function setName(?string $name): Person
+     {
         $this->name = $name;
-        $this->email = $email;
 
         return $this;
-    }
+     }
 
-    /**
-     * @return string
+
+
+     /**
+      * @return null|string
      */
-    public function getEmail(): string
-    {
+     public function getEmail(): ?string
+     {
         return $this->email;
-    }
+     }
 
-    /**
-     * @param string $email
-     * @return Person
+
+     /**
+      * @param string|null $email
+      * @return Person
      */
-    public function setEmail(string $email): Person
-    {
+     public function setEmail(?string $email): Person
+     {
         $this->email = $email;
         return $this;
-    }
+     }
 
 }
