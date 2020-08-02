@@ -35,6 +35,13 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @var array
+     */
+    protected $shared = [];
+
+
+
+    /**
+     * @var array
     */
     protected $calls = [];
 
@@ -93,6 +100,16 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
+    /**
+     * @param ContainerInterface|null $container
+     * @return ContainerInterface
+    */
+    public static function setInstance(ContainerInterface $container = null)
+    {
+        return static::$instance = $container;
+    }
+
+
 
     /**
      * @param bool $status
@@ -115,36 +132,40 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function bind($abstract, $concrete = null, bool $shared = false)
     {
-          if(is_null($concrete))
-          {
-              $concrete = $abstract;
-          }
+        if(is_null($concrete))
+        {
+            $concrete = $abstract;
+        }
 
-          if($concrete instanceof Closure)
-          {
-               $concrete = $concrete($this);
-          }
+        $concrete = $this->resolveConcrete($concrete);
+        $this->bindings[$abstract] = compact('concrete', 'shared');
 
-          if($this->canResolveConcrete($concrete))
-          {
-              $concrete = $this->makeInstance($concrete);
-          }
-          
-          $this->bindings[$abstract] = compact('concrete', 'shared');
-
-          return $this;
+        return $this;
     }
 
 
     /**
      * @param $concrete
-     * @return bool
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
     */
-    public function canResolveConcrete($concrete)
+    public function resolveConcrete($concrete)
     {
-        return is_string($concrete) && class_exists($concrete);
+        if($concrete instanceof Closure)
+        {
+            return $concrete($this); 
+        }
+
+        if(class_exists($concrete))
+        {
+            return $this->resolveInstance($concrete);
+        }
+
+        return $concrete;
     }
-    
+
+
     
     /**
      * @param $abstract
@@ -158,13 +179,33 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
+     * @param $abstract
+     * @return bool
+    */
+    public function isResolved($abstract)
+    {
+        return isset($this->resolved[$abstract]);
+    }
+
+
+    /**
+     * @param $abstract
+     * @return mixed
+    */
+    public function getResolved($abstract)
+    {
+        return $this->resolved[$abstract];
+    }
+
+    /**
      * @param array $binds
     */
     public function binds(array $binds)
     {
-        foreach ($binds as $bind)
+        foreach ($binds as $bindParam)
         {
-            list($abstract, $concrete, $shared) = $bind;
+            list($abstract, $concrete, $shared) = $bindParam;
+
             $this->bind($abstract, $concrete, $shared);
         }
     }
@@ -190,6 +231,26 @@ class Container implements \ArrayAccess, ContainerInterface
          $this->bind($abstract, $concrete, true);
     }
 
+
+
+    /**
+     * @param $abstract
+     * @param $concrete
+     * @return Closure
+     */
+    public function share($abstract, $concrete)
+    {
+        $this->instances[$abstract] = (function () use ($abstract, $concrete){
+
+            if(! isset($this->shared[$abstract]))
+            {
+                $this->shared[$abstract] = $this->resolveConcrete($concrete);
+            }
+
+            return $this->shared[$abstract];
+
+        })();
+    }
 
 
 
@@ -296,6 +357,20 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
+
+    /**
+     * @param array $aliases
+     */
+    public function aliases(array $aliases)
+    {
+        foreach ($aliases as $name => $original)
+        {
+            $this->alias($name, $original);
+        }
+    }
+
+
+
     /**
      * @param $name
      * @return bool
@@ -304,6 +379,7 @@ class Container implements \ArrayAccess, ContainerInterface
     {
         return isset($this->aliases[$name]);
     }
+
 
 
     /**
@@ -387,12 +463,7 @@ class Container implements \ArrayAccess, ContainerInterface
              $this->instance($abstract, $concrete);
         }
 
-        if($this->hasInstance($abstract))
-        {
-            return $this->instances[$abstract];
-        }
-
-        return $this->resolved[$abstract] = $this->makeInstance($abstract, $arguments);
+        return $this->resolved[$abstract] = $this->resolveInstance($abstract, $arguments);
     }
 
 
@@ -407,20 +478,25 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
+
     /**
      * @param $abstract
      * @param array $arguments
      * @return object
     */
-    public function makeInstance($abstract, $arguments = [])
+    public function resolveInstance($abstract, $arguments = [])
     {
+        if($this->hasInstance($abstract))
+        {
+            return $this->instances[$abstract];
+        }
+
         $reflectedClass = new ReflectionClass($abstract);
 
         if(! $reflectedClass->isInstantiable())
         {
             foreach ($this->instances as $instance)
             {
-                //dump($id, $instance);
                 $implements = class_implements($instance);
 
                 if(! isset($implements[$abstract]))
@@ -438,7 +514,6 @@ class Container implements \ArrayAccess, ContainerInterface
         {
             return $reflectedClass->newInstance();
         }
-
 
         $dependencies = $this->resolveMethodDependencies($constructor, $arguments);
         return $reflectedClass->newInstanceArgs($dependencies);
@@ -514,6 +589,218 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
+     * @param $abstract
+     * @param array $arguments
+     * @param $method
+     * @return mixed
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+     */
+    public function call($abstract, array $arguments = [], $method = null)
+    {
+        if(! \is_callable($abstract))
+        {
+            if(is_object($abstract))
+            {
+                $abstract = get_class($abstract);
+            }
+
+            $arguments = $this->resolveMethodDependencies(
+                new ReflectionMethod($abstract, $method),
+                $arguments
+            );
+
+            $object = $this->get($abstract);
+
+            if(method_exists($object, $method))
+            {
+                return $this->calling([$object, $method], $arguments);
+            }
+        }
+
+        if($abstract instanceof Closure && ! $method)
+        {
+            return $this->calling($abstract,
+                array_merge($this->resolveFunctionDependencies($abstract), $arguments)
+            );
+        }
+    }
+
+
+
+
+    /**
+     * @param $abstract
+     * @param $method
+     * @param array $arguments
+     * @return $this
+     */
+    public function bindcalling($abstract, $arguments = [], $method = null)
+    {
+        $this->calls[$abstract][] = [$abstract, $arguments, $method];
+
+        return $this;
+    }
+
+
+
+    /**
+     * @param Closure $closure
+     * @return void
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+    */
+    public function closure(\Closure $closure)
+    {
+        $dependencies = $this->resolveFunctionDependencies($closure);
+        $closure(...$dependencies);
+    }
+
+    /**
+     * @param $callable
+     * @param array $arguments
+     * @return mixed
+     * @throws ReflectionException
+     */
+    public function calling($callable, array $arguments = [])
+    {
+        return call_user_func_array($callable, $arguments);
+    }
+
+
+    /**
+     * @param $concrete
+     * @return mixed
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+    */
+    public function getClosure($concrete)
+    {
+        $dependencies = $this->resolveFunctionDependencies($concrete);
+        return $concrete(...$dependencies);
+    }
+
+
+
+
+    /**
+     * @param ServiceProvider $provider
+     * @throws ContainerException
+    */
+    protected function resolveProvides(ServiceProvider $provider)
+    {
+        if($provides = $provider->getProvides())
+        {
+            foreach ($provides as $provide)
+            {
+                if(! isset($this->aliases[$provide]))
+                {
+                    throw new ContainerException(
+                        sprintf('Can not resolve this alias %s', $provide)
+                    );
+                }
+            }
+
+            $this->setProvides($provider->getProvides());
+        }
+    }
+
+
+
+    /**
+     * Add Service Provider
+     * @param string|ServiceProvider $provider
+     * @return Container
+     *
+     *  Example:
+     *  $this->addServiceProvider(new \App\Providers\AppServiceProvider());
+     *  $this->addServiceProvider(App\Providers\AppServiceProvider::class);
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+    */
+    public function addServiceProvider($provider)
+    {
+        if(is_string($provider))
+        {
+            $provider = $this->resolveInstance($provider);
+        }
+
+        if($provider instanceof ServiceProvider)
+        {
+            $provider->setContainer($this);
+
+            if(! \in_array($provider, $this->providers))
+            {
+                $implements = class_implements($provider);
+
+                if(isset($implements[BootableServiceProvider::class]))
+                {
+                    $provider->boot();
+                }
+
+                $provider->register();
+
+                $this->providers[] = $provider;
+            }
+        }
+
+        return $this;
+    }
+
+
+
+    /**
+     * @param array $providers
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+     */
+    public function addServiceProviders(array $providers)
+    {
+        foreach ($providers as $provider)
+        {
+            $this->addServiceProvider($provider);
+        }
+    }
+
+
+
+    /**
+     * @param ServiceProvider $serviceProvider
+     * @return array
+     */
+    public function getServiceProvides(ServiceProvider $serviceProvider)
+    {
+        return $serviceProvider->getProvides();
+    }
+
+
+    /**
+     * @param array $provides
+     * @return $this
+     */
+    public function setProvides(array $provides)
+    {
+        $this->provides = array_merge($this->provides, $provides);
+
+        return $this;
+    }
+
+
+    /**
+     * @return array
+     */
+    public function getProvides()
+    {
+        return $this->provides;
+    }
+
+
+    /**
      * @param $id
      * @return bool
     */
@@ -566,5 +853,25 @@ class Container implements \ArrayAccess, ContainerInterface
           $this->instances[$id],
           $this->resolved[$id]
         );
+    }
+
+
+    /**
+     * @param $name
+     * @return array|bool|mixed|object|string|null
+     */
+    public function __get($name)
+    {
+        return $this[$name];
+    }
+
+
+    /**
+     * @param $name
+     * @param $value
+    */
+    public function __set($name, $value)
+    {
+        $this[$name] = $value;
     }
 }

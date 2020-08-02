@@ -216,7 +216,7 @@ class DI implements \ArrayAccess, ContainerInterface
      * Bind from configuration
      *
      * @param array $configs
-     * @return Container
+     * @return DI
      */
     public function bindings(array $configs)
     {
@@ -448,7 +448,7 @@ class DI implements \ArrayAccess, ContainerInterface
      * @param $abstract
      * @param $arguments
      * @return mixed
-     */
+    */
     public function resolve($abstract, $arguments = [])
     {
         /*

@@ -10,8 +10,7 @@ require_once __DIR__.'/../vendor/autoload.php';
 
 $container = new \Jan\Component\DI\Container();
 
-/*
- * BINDINGS
+// BINDINGS
 $container->bind('single');
 $container->bind('something', 'do somethings');
 $container->bind('foo', 'Foo');
@@ -23,27 +22,26 @@ $container->bind('test', function () {
 dump($container->get('something'));
 dump($container->get('test'));
 
+/*
 $container->instance(\App\Person::class, new \App\Person());
 dump($container->has(App\Person::class));
-*/
 
 
-//$container->instance(\App\Person::class, new \App\Person());
-// $container->bind(\App\Person::class, \App\Person::class);
+$container->instance(\App\Person::class, new \App\Person());
+$container->bind(\App\Person::class, \App\Person::class);
 
-// $container->instance(\App\Person::class, new \App\Person());
+$container->instance(\App\Person::class, new \App\Person());
 $container->singleton(\App\PersonInterface::class, \App\Person::class);
 dump($container->get(App\PersonInterface::class));
 dump($container->get(App\PersonInterface::class));
 dump($container->get(App\PersonInterface::class));
-dump($container->get(App\PersonInterface::class));
 
 
-/*
 dump($container->make(\App\Foo::class));
 dump($container->make(\App\Foo::class));
 dump($container->make(\App\Foo::class));
 dump($container->make(\App\Foo::class));
+*/
 
 $container->bind('foo', function () {
 
@@ -51,6 +49,11 @@ $container->bind('foo', function () {
 });
 
 dump($container->get('foo'));
-*/
+
+
+$container->instance(\App\Person::class, new \App\Person());
+// $container->bind(\App\Person::class, \App\Person::class);
+
+dump($container->get(\App\Person::class));
 
 dd($container);
