@@ -502,8 +502,13 @@ class Container implements \ArrayAccess, ContainerInterface
                 if(! isset($implements[$abstract]))
                 {
                     throw new ContainerException(
-                        sprintf('Can not get instance of %s', $abstract)
+                        sprintf('Can not resolve instance of %s', $abstract)
                     );
+                }
+
+                if($instance instanceof $abstract)
+                {
+                    return $instance;
                 }
 
                 return $instance;
@@ -636,11 +641,58 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param array $arguments
      * @return $this
      */
-    public function bindcalling($abstract, $arguments = [], $method = null)
+    public function bindCalling($abstract, $arguments = [], $method = null)
     {
         $this->calls[$abstract][] = [$abstract, $arguments, $method];
 
         return $this;
+    }
+
+
+    /**
+     * Boot calls method
+     * @param string $id
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+     */
+    public function callMethod(string $id)
+    {
+        if($callParams = $this->called($id))
+        {
+            foreach ($callParams as $callParam)
+            {
+                list($abstract, $parameters, $method) = $callParam;
+
+                $this->call($abstract, $parameters, $method);
+            }
+        }
+    }
+
+
+    /**
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+    */
+    public function callMethods()
+    {
+        foreach (array_keys($this->calls) as $id)
+        {
+            $this->callMethod($id);
+        }
+    }
+
+
+
+
+    /**
+     * @param string $id
+     * @return array|mixed
+    */
+    public function called(string $id)
+    {
+         return $this->calls[$id] ?? [];
     }
 
 
