@@ -10,6 +10,9 @@ require_once __DIR__.'/../vendor/autoload.php';
 
 $container = new \Jan\Component\DI\Container();
 
+$container->instance(\Jan\Component\DI\Contracts\ContainerInterface::class, $container);
+
+
 // BINDINGS
 $container->bind('single');
 $container->bind('something', 'do somethings');
@@ -43,6 +46,7 @@ dump($container->make(\App\Foo::class));
 dump($container->make(\App\Foo::class));
 */
 
+
 $container->bind('foo', function () {
 
     return new \App\Foo(new \App\Bar());
@@ -55,5 +59,8 @@ $container->instance(\App\Person::class, new \App\Person());
 // $container->bind(\App\Person::class, \App\Person::class);
 
 dump($container->get(\App\Person::class));
+
+// $container->instance(\Jan\Component\DI\Contracts\ContainerInterface::class, new \Jan\Component\DI\Container());
+$container->call(\App\Controllers\HomeController::class, ['slug' => 'article-1', 'id' => 1], 'index');
 
 dd($container);

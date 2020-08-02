@@ -471,7 +471,7 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param $abstract
      * @return bool
     */
-    protected function isBounded($abstract)
+    public function isBounded($abstract)
     {
         return isset($this->bindings[$abstract]['shared'])
                && $this->bindings[$abstract]['shared'] === false;
@@ -495,10 +495,8 @@ class Container implements \ArrayAccess, ContainerInterface
 
         if(! $reflectedClass->isInstantiable())
         {
-            foreach ($this->instances as $instance)
-            {
-                return $this->getInstanceFromImplemented($abstract, $instance);
-            }
+
+            return $this->getInstanceFromImplemented($abstract);
         }
 
         if(! $constructor = $reflectedClass->getConstructor())
@@ -513,23 +511,27 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @param $abstract
-     * @param $instance
      * @return mixed
      * @throws ContainerException
     */
-    protected function getInstanceFromImplemented($abstract, $instance)
+    public function getInstanceFromImplemented($abstract)
     {
-        $implements = class_implements($instance);
-
-        if(isset($implements[$abstract]) || $instance instanceof $abstract)
+        foreach ($this->instances as $instance)
         {
-            return $instance;
+            $implements = class_implements($instance);
+
+            if(isset($implements[$abstract]) || $instance instanceof $abstract)
+            {
+                 return $instance;
+            }
         }
 
         throw new ContainerException(
-            sprintf('Can not resolve instance of %s', $abstract)
+            sprintf('Cannot resolve instance of %s', $abstract)
         );
     }
+
+
 
     /**
      * @param ReflectionMethod $reflectionMethod
@@ -606,35 +608,30 @@ class Container implements \ArrayAccess, ContainerInterface
      * @throws ContainerException
      * @throws ReflectionException
      * @throws ResolverDependencyException
-     */
+    */
     public function call($abstract, array $arguments = [], $method = null)
     {
-        if(! \is_callable($abstract))
-        {
-            if(is_object($abstract))
-            {
-                $abstract = get_class($abstract);
-            }
+       if(! is_callable($abstract) && $method)
+       {
+           if(is_object($abstract))
+           {
+               $abstract = get_class($abstract);
+           }
 
-            $arguments = $this->resolveMethodDependencies(
-                new ReflectionMethod($abstract, $method),
-                $arguments
-            );
+           $arguments = $this->resolveMethodDependencies(
+               new ReflectionMethod($abstract, $method),
+               $arguments
+           );
 
-            $object = $this->get($abstract);
+           $object = $this->get($abstract);
 
-            if(method_exists($object, $method))
-            {
-                return $this->calling([$object, $method], $arguments);
-            }
-        }
+           if(method_exists($object, $method))
+           {
+               return $this->calling([$object, $method], $arguments);
+           }
+       }
 
-        if($abstract instanceof Closure && ! $method)
-        {
-            return $this->calling($abstract,
-                array_merge($this->resolveFunctionDependencies($abstract), $arguments)
-            );
-        }
+       return $this->calling($abstract, $arguments);
     }
 
 
@@ -715,6 +712,8 @@ class Container implements \ArrayAccess, ContainerInterface
         $closure(...$dependencies);
     }
 
+
+
     /**
      * @param $callable
      * @param array $arguments
@@ -723,6 +722,11 @@ class Container implements \ArrayAccess, ContainerInterface
      */
     public function calling($callable, array $arguments = [])
     {
+        if($callable instanceof Closure)
+        {
+            $arguments = array_merge($this->resolveFunctionDependencies($callable), $arguments);
+        }
+
         return call_user_func_array($callable, $arguments);
     }
 
