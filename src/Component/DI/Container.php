@@ -446,6 +446,7 @@ class Container implements \ArrayAccess, ContainerInterface
     /**
      * @param $abstract
      * @param array $arguments
+     * @return mixed|object|null
     */
     public function resolve($abstract, $arguments = [])
     {
@@ -467,17 +468,6 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
-    /**
-     * @param $abstract
-     * @return bool
-    */
-    public function isBounded($abstract)
-    {
-        return isset($this->bindings[$abstract]['shared'])
-               && $this->bindings[$abstract]['shared'] === false;
-    }
-
-
 
     /**
      * @param $abstract
@@ -489,6 +479,11 @@ class Container implements \ArrayAccess, ContainerInterface
         if($this->hasInstance($abstract))
         {
             return $this->instances[$abstract];
+        }
+
+        if(! class_exists($abstract))
+        {
+            return $abstract;
         }
 
         $reflectedClass = new ReflectionClass($abstract);
@@ -547,6 +542,7 @@ class Container implements \ArrayAccess, ContainerInterface
             if ($parameter->isOptional()) {
                 continue;
             }
+
             if ($parameter->isArray()) {
                 continue;
             }
@@ -696,6 +692,16 @@ class Container implements \ArrayAccess, ContainerInterface
          return $this->calls[$id] ?? [];
     }
 
+
+    /**
+     * @param $abstract
+     * @return bool
+     */
+    public function isBounded($abstract)
+    {
+        return isset($this->bindings[$abstract]['shared'])
+            && $this->bindings[$abstract]['shared'] === false;
+    }
 
 
     /**

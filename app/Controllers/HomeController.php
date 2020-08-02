@@ -20,7 +20,7 @@ class HomeController
      * HomeController constructor.
      * @param ContainerInterface|null $container
    */
-   public function __construct(ContainerInterface $container)
+   public function __construct(ContainerInterface $container = null)
    {
         $this->container = $container;
    }
