@@ -570,13 +570,13 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
-     * @param Closure $closure
+     * @param callable $closure
      * @return array
      * @throws ContainerException
      * @throws ReflectionException
      * @throws ResolverDependencyException
-     */
-    public function resolveFunctionDependencies(Closure $closure)
+    */
+    public function resolveFunctionDependencies($closure)
     {
         $reflectedFunction = new \ReflectionFunction($closure);
 

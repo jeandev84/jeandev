@@ -63,4 +63,9 @@ dump($container->get(\App\Person::class));
 // $container->instance(\Jan\Component\DI\Contracts\ContainerInterface::class, new \Jan\Component\DI\Container());
 $container->call(\App\Controllers\HomeController::class, ['slug' => 'article-1', 'id' => 1], 'index');
 
+$container->call(function (Request $request, Response $response) {
+
+    dump($request, $response);
+    echo 'Привет!';
+});
 dd($container);
