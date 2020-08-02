@@ -495,7 +495,6 @@ class Container implements \ArrayAccess, ContainerInterface
 
         if(! $reflectedClass->isInstantiable())
         {
-
             return $this->getInstanceFromImplemented($abstract);
         }
 
