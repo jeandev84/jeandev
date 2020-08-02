@@ -497,21 +497,7 @@ class Container implements \ArrayAccess, ContainerInterface
         {
             foreach ($this->instances as $instance)
             {
-                $implements = class_implements($instance);
-
-                if(! isset($implements[$abstract]))
-                {
-                    throw new ContainerException(
-                        sprintf('Can not resolve instance of %s', $abstract)
-                    );
-                }
-
-                if($instance instanceof $abstract)
-                {
-                    return $instance;
-                }
-
-                return $instance;
+                return $this->getInstanceFromImplemented($abstract, $instance);
             }
         }
 
@@ -525,6 +511,25 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
+    /**
+     * @param $abstract
+     * @param $instance
+     * @return mixed
+     * @throws ContainerException
+    */
+    protected function getInstanceFromImplemented($abstract, $instance)
+    {
+        $implements = class_implements($instance);
+
+        if(isset($implements[$abstract]) || $instance instanceof $abstract)
+        {
+            return $instance;
+        }
+
+        throw new ContainerException(
+            sprintf('Can not resolve instance of %s', $abstract)
+        );
+    }
 
     /**
      * @param ReflectionMethod $reflectionMethod
