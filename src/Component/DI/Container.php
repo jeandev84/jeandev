@@ -36,13 +36,6 @@ class Container implements \ArrayAccess, ContainerInterface
     /**
      * @var array
     */
-    protected $shared = [];
-
-
-
-    /**
-     * @var array
-    */
     protected $calls = [];
 
 
@@ -132,6 +125,11 @@ class Container implements \ArrayAccess, ContainerInterface
                $concrete = $concrete($this);
           }
 
+          if($this->canResolveConcrete($concrete))
+          {
+              $concrete = $this->makeInstance($concrete);
+          }
+          
           $this->bindings[$abstract] = compact('concrete', 'shared');
 
           return $this;
@@ -139,21 +137,22 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
     /**
+     * @param $concrete
+     * @return bool
+    */
+    public function canResolveConcrete($concrete)
+    {
+        return is_string($concrete) && class_exists($concrete);
+    }
+    
+    
+    /**
      * @param $abstract
      * @return bool
     */
     public function bound($abstract)
     {
         return isset($this->bindings[$abstract]);
-    }
-
-
-    /**
-     * @param $abstract
-    */
-    public function rebound($abstract)
-    {
-
     }
 
 
@@ -193,6 +192,38 @@ class Container implements \ArrayAccess, ContainerInterface
 
 
 
+
+    /**
+     * Create new instance of object wit given params
+     *
+     * @param $abstract
+     * @param array $parameters
+     * @return object
+    */
+    public function make($abstract, $parameters = [])
+    {
+        return (function () use ($abstract, $parameters) {
+
+            return $this->resolve($abstract, $parameters);
+
+        })();
+    }
+
+
+    /**
+     * @param $abstract
+     * @return bool|object
+    */
+    public function factory($abstract)
+    {
+        return (function () use ($abstract) {
+
+            return $this->make($abstract);
+
+        })();
+    }
+
+
     /**
      * @param $abstract
      * @return bool
@@ -206,27 +237,6 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @param $abstract
-     * @param $concrete
-     * @return void
-    */
-    public function share($abstract, $concrete)
-    {
-        $this->instances[$abstract] = (function () use ($abstract, $concrete){
-
-            if(! isset($this->shared[$abstract]))
-            {
-                $this->shared[$abstract] = $concrete;
-            }
-
-            return $this->shared[$abstract];
-
-        })();
-    }
-
-
-
-    /**
-     * @param $abstract
      * @return bool
     */
     public function isShared($abstract)
@@ -235,14 +245,23 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
-
     /**
      * @param $abstract
-     * @param $instance
-    */
+     * @param object $instance
+     */
     public function instance($abstract, $instance)
     {
          $this->instances[$abstract] = $instance;
+    }
+
+
+    /**
+     * @param $abstract
+     * @return mixed
+    */
+    public function getConcreteInstance($abstract)
+    {
+         return $this->instances[$abstract];
     }
 
 
@@ -304,18 +323,6 @@ class Container implements \ArrayAccess, ContainerInterface
 
     /**
      * @param $abstract
-     */
-    public function getContextualConcrete($abstract)
-    {
-        if(! $this->isShared($abstract))
-        {
-
-        }
-    }
-
-
-    /**
-     * @param $abstract
      * @return bool
     */
     public function hasConcrete($abstract)
@@ -349,12 +356,14 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function get($id, $arguments = [])
     {
-        if (! $this->has($id))
-        {
-             $this->bind($id);
-        }
+        try {
 
-        return $this->resolve($id, $arguments);
+            return $this->resolve($id, $arguments);
+
+        } catch (ContainerException $e) {
+
+            throw $e;
+        }
     }
 
 
@@ -366,31 +375,35 @@ class Container implements \ArrayAccess, ContainerInterface
     {
         $abstract = $this->getAlias($abstract);
 
-        /* $concrete = $this->getContextualConcrete($abstract); */
         $concrete = $this->getConcrete($abstract);
+
+        if($this->isBounded($abstract))
+        {
+            return $concrete;
+        }
 
         if($this->isSingleton($abstract))
         {
              $this->instance($abstract, $concrete);
         }
 
-        if(! $this->isNeedResolution($abstract))
+        if($this->hasInstance($abstract))
         {
-             return $concrete;
+            return $this->instances[$abstract];
         }
 
-        return $this->resolveInstance($abstract, $arguments);
+        return $this->resolved[$abstract] = $this->makeInstance($abstract, $arguments);
     }
-
 
 
     /**
      * @param $abstract
      * @return bool
     */
-    public function isNeedResolution($abstract)
+    protected function isBounded($abstract)
     {
-        return class_exists($abstract);
+        return isset($this->bindings[$abstract]['shared'])
+               && $this->bindings[$abstract]['shared'] === false;
     }
 
 
@@ -399,30 +412,38 @@ class Container implements \ArrayAccess, ContainerInterface
      * @param array $arguments
      * @return object
     */
-    public function resolveInstance($abstract, $arguments = [])
+    public function makeInstance($abstract, $arguments = [])
     {
-        if($this->hasInstance($abstract))
-        {
-            return $this->instances[$abstract];
-        }
-
         $reflectedClass = new ReflectionClass($abstract);
 
         if(! $reflectedClass->isInstantiable())
         {
-            throw new ContainerException(
-                sprintf('[%s] is not instantiable dependency.', $abstract)
-            );
+            foreach ($this->instances as $instance)
+            {
+                //dump($id, $instance);
+                $implements = class_implements($instance);
+
+                if(! isset($implements[$abstract]))
+                {
+                    throw new ContainerException(
+                        sprintf('Can not get instance of %s', $abstract)
+                    );
+                }
+
+                return $instance;
+            }
         }
 
         if(! $constructor = $reflectedClass->getConstructor())
         {
-            return $this->resolved[$abstract] = $reflectedClass->newInstance();
+            return $reflectedClass->newInstance();
         }
 
+
         $dependencies = $this->resolveMethodDependencies($constructor, $arguments);
-        return $this->resolved[$abstract] =  $reflectedClass->newInstanceArgs($dependencies);
+        return $reflectedClass->newInstanceArgs($dependencies);
     }
+
 
 
     /**
@@ -432,19 +453,61 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function resolveMethodDependencies(ReflectionMethod  $reflectionMethod, $arguments = [])
     {
-         return array_filter($reflectionMethod->getParameters(), function ($parameter) use ($arguments){
+        $dependencies = [];
 
-             dd($parameter);
+        foreach ($reflectionMethod->getParameters() as $parameter) {
+            $dependency = $parameter->getClass();
 
-         }, ARRAY_FILTER_USE_KEY);
+            if ($parameter->isOptional()) {
+                continue;
+            }
+            if ($parameter->isArray()) {
+                continue;
+            }
+
+            if (is_null($dependency)) {
+                if ($parameter->isDefaultValueAvailable()) {
+                    $dependencies[] = $parameter->getDefaultValue();
+                } else {
+
+                    if (array_key_exists($parameter->getName(), $arguments)) {
+                        $dependencies[] = $arguments[$parameter->getName()];
+                    } else {
+                        $dependencies = array_merge($dependencies, $arguments);
+                    }
+                }
+
+            } else {
+
+                $dependencies[] = $this->get($dependency->getName());
+            }
+        }
+
+        return $dependencies;
     }
 
 
     /**
-     * @param ReflectionParameter $parameter
-    */
-    public function resolveMethodParameters(ReflectionParameter  $parameter)
+     * @param Closure $closure
+     * @return array
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ResolverDependencyException
+     */
+    public function resolveFunctionDependencies(Closure $closure)
     {
+        $reflectedFunction = new \ReflectionFunction($closure);
+
+        $dependencies = [];
+
+        foreach ($reflectedFunction->getParameters() as $parameter)
+        {
+            $dependencies[] = $this->resolve($parameter->getType()->getName());
+        }
+
+        $dependencies[] = $this;
+
+        return $dependencies;
 
     }
 

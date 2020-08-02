@@ -15,6 +15,6 @@ class Foo
       */
       public function __construct(Bar $bar)
       {
-           echo __METHOD__.'<br>';
+           echo 'Foo::class';
       }
 }

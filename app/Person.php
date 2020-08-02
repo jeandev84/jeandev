@@ -6,7 +6,7 @@ namespace App;
  * Class Person
  * @package App
 */
-class Person
+class Person implements PersonInterface
 {
 
      /**
@@ -25,15 +25,19 @@ class Person
 
      /**
       * Person constructor.
-      * @param $name
-      * @param $email
      */
-     public function __construct($name = null, $email = null)
+     public function __construct()
      {
-          $this->setName($name);
-          $this->setEmail($email);
+
      }
 
+    /*
+    public function __construct($name = null, $email = null)
+    {
+         $this->setName($name);
+         $this->setEmail($email);
+    }
+    */
 
 
      /**
