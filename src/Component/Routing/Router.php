@@ -431,13 +431,13 @@ class Router implements RouterInterface
      }
 
 
-       /**
-         * @param string $path
-         * @param array $params
-         * @return string|string[]|null
-      */
-      protected function replaceParams(string $path, array $params = [])
-      {
+     /**
+       * @param string $path
+       * @param array $params
+       * @return string|string[]|null
+     */
+     protected function replaceParams(string $path, array $params = [])
+     {
             if($params)
             {
                 foreach($params as $k => $v)

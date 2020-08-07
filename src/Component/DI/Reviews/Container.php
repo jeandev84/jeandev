@@ -721,7 +721,17 @@ class Container implements \ArrayAccess, ContainerInterface
     */
     public function callback($callable, array $arguments = [])
     {
-         return call_user_func_array($callable, $arguments);
+        if($callable instanceof Closure)
+        {
+            $this->calls[] = [$callable, $arguments];
+        }
+
+        if(is_array($callable))
+        {
+            $this->calls = array_merge($this->calls, compact('callable', 'arguments'));
+        }
+
+        return call_user_func_array($callable, $arguments);
     }
 
 

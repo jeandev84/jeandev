@@ -103,3 +103,25 @@ class Autoloader
          return static::$root . '/' . $this->namespaceMap[$namespace] . '/' . implode('/', $pathParts) . '.php';
      }
 }
+
+
+/*
+$autoloader = Autoloader::load(__DIR__.'/../');
+
+$autoloader->addNamespace('Jan\\', 'src/');
+$autoloader->addNamespace('App\\', '/app/');
+
+$autoloader->register();
+
+
+$user = new User();
+
+dump($user->getRole());
+dump($user->getRoles());
+
+dump($autoloader->getMappedNamespaces());
+
+$work = new Worker();
+
+$work->run();
+*/

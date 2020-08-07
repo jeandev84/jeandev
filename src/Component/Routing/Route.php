@@ -26,6 +26,11 @@ class Route implements \ArrayAccess
      private $path;
 
 
+     /**
+      * @var string
+     */
+     private $pattern;
+
 
      /**
       * @var array
@@ -138,6 +143,25 @@ class Route implements \ArrayAccess
     }
 
 
+    /**
+     * @return string
+    */
+    public function generatePattern()
+    {
+        return '#^' . $this->compile(trim($this->getPath(), '/')) . '$#i';
+    }
+
+
+    /**
+     * @param $pattern
+     * @return $this
+    */
+    public function setPattern($pattern)
+    {
+        $this->pattern = $pattern;
+
+        return $this;
+    }
 
 
     /**
@@ -145,7 +169,7 @@ class Route implements \ArrayAccess
     */
     public function getPattern()
     {
-        return '#^' . $this->compile(trim($this->getPath(), '/')) . '$#i';
+        return $this->pattern;
     }
 
 
@@ -182,6 +206,13 @@ class Route implements \ArrayAccess
     {
         if($this->hasRegex($matches[1]))
         {
+            /*
+            if(strpos($this->getPath(), '?'))
+            {
+                return '?(?P<'. $matches[1] .'>'. $this->getRegex($matches[1]) . ')?';
+            }
+            */
+
             return '(?P<'. $matches[1] .'>'. $this->getRegex($matches[1]) . ')';
         }
 
@@ -409,8 +440,10 @@ class Route implements \ArrayAccess
     */
     public function isMatchingPath(string $requestUri)
     {
-        if(preg_match($this->getPattern(), $this->resolveUrl($requestUri), $matches))
+        if(preg_match($pattern = $this->generatePattern(), $this->resolveUrl($requestUri), $matches))
         {
+            $this->setPattern($pattern);
+
             $this->setMatches(
                 $this->getFilteredMatchParams($matches)
             );

@@ -1,41 +1,46 @@
 <?php
 
-use Jan\Autoload\Autoloader;
 use Jan\Component\Http\Request;
 use Jan\Component\Http\Response;
-use Jan\Component\Routing\Route;
 use Jan\Component\Routing\Router;
-use App\Entity\User;
-use Jan\Worker;
+
+require_once __DIR__.'/../vendor/autoload.php';
 
 
-function dump($arr, $die = false)
+$container = new \Jan\Component\DI\Container();
+
+$router = new Router();
+
+$router->map('GET', '/', function (Request $request, Response $response) {
+    echo $request->getMethod() . '<br>';
+    echo 'Привет! Мир!';
+},'home');
+
+$router->map('GET', '/foo/{id}', function (Request $request, Response $response) {
+    echo $request->getUri() . '<br>';
+    echo 'Foo!';
+},'foo');
+
+
+/*
+$router->map('GET', '/foo/?{id}', function (Request $request, Response $response) {
+    echo $request->getUri() . '<br>';
+    echo 'Foo!';
+},'foo');
+*/
+
+
+$route = $router->match($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+
+// dump($route->getTarget());
+
+if(! $route)
 {
-    echo '<pre>';
-    print_r($arr);
-    echo '</pre>';
-    if($die) die;
+    exit('404 Page not found!');
 }
 
-// require_once __DIR__.'/../vendor/autoload.php';
+dump($route);
 
-require_once __DIR__.'/../src/Autoload/Autoloader.php';
+$response = $container->call($route->getTarget(), $route->getMatches());
 
-$autoloader = Autoloader::load(__DIR__.'/../');
-
-$autoloader->addNamespace('Jan\\', 'src/');
-$autoloader->addNamespace('App\\', '/app/');
-
-$autoloader->register();
-
-
-$user = new User();
-
-dump($user->getRole());
-dump($user->getRoles());
-
-dump($autoloader->getMappedNamespaces());
-
-$work = new Worker();
-
-$work->run();
+dd($container);
