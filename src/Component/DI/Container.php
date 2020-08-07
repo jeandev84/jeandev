@@ -157,7 +157,7 @@ class Container implements \ArrayAccess, ContainerInterface
             return $concrete($this); 
         }
 
-        if(class_exists($concrete))
+        if($this->isReflectible($concrete))
         {
             return $this->resolveInstance($concrete);
         }
@@ -166,7 +166,16 @@ class Container implements \ArrayAccess, ContainerInterface
     }
 
 
-    
+    /**
+     * @param $classname
+     * @return bool
+    */
+    protected function isReflectible(string $classname)
+    {
+        return class_exists($classname);
+    }
+
+
     /**
      * @param $abstract
      * @return bool
@@ -472,7 +481,7 @@ class Container implements \ArrayAccess, ContainerInterface
     /**
      * @param $abstract
      * @param array $arguments
-     * @return object
+     * @return string|object
     */
     public function resolveInstance($abstract, $arguments = [])
     {
@@ -481,7 +490,7 @@ class Container implements \ArrayAccess, ContainerInterface
             return $this->instances[$abstract];
         }
 
-        if(! class_exists($abstract))
+        if(! $this->isReflectible($abstract))
         {
             return $abstract;
         }
@@ -498,8 +507,9 @@ class Container implements \ArrayAccess, ContainerInterface
             return $reflectedClass->newInstance();
         }
 
-        $dependencies = $this->resolveMethodDependencies($constructor, $arguments);
-        return $reflectedClass->newInstanceArgs($dependencies);
+        return $reflectedClass->newInstanceArgs(
+            $dependencies = $this->resolveMethodDependencies($constructor, $arguments)
+        );
     }
 
 

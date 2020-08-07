@@ -1,71 +1,41 @@
 <?php
 
+use Jan\Autoload\Autoloader;
 use Jan\Component\Http\Request;
 use Jan\Component\Http\Response;
 use Jan\Component\Routing\Route;
 use Jan\Component\Routing\Router;
-
-require_once __DIR__.'/../vendor/autoload.php';
-
-
-$container = new \Jan\Component\DI\Container();
-
-$container->instance(\Jan\Component\DI\Contracts\ContainerInterface::class, $container);
+use App\Entity\User;
+use Jan\Worker;
 
 
-// BINDINGS
-$container->bind('single');
-$container->bind('something', 'do somethings');
-$container->bind('foo', 'Foo');
-$container->bind('test', function () {
-    return 'Test';
-});
+function dump($arr, $die = false)
+{
+    echo '<pre>';
+    print_r($arr);
+    echo '</pre>';
+    if($die) die;
+}
+
+// require_once __DIR__.'/../vendor/autoload.php';
+
+require_once __DIR__.'/../src/Autoload/Autoloader.php';
+
+$autoloader = Autoloader::load(__DIR__.'/../');
+
+$autoloader->addNamespace('Jan\\', __DIR__ . '/../src');
+$autoloader->addNamespace('App\\', __DIR__.'/../app');
+
+$autoloader->register();
 
 
-dump($container->get('something'));
-dump($container->get('test'));
+$user = new User();
 
-/*
-$container->instance(\App\Person::class, new \App\Person());
-dump($container->has(App\Person::class));
+dump($user->getRole());
+dump($user->getRoles());
 
+dump($autoloader->getMappedNamespaces());
 
-$container->instance(\App\Person::class, new \App\Person());
-$container->bind(\App\Person::class, \App\Person::class);
+$work = new Worker();
 
-$container->instance(\App\Person::class, new \App\Person());
-$container->singleton(\App\PersonInterface::class, \App\Person::class);
-dump($container->get(App\PersonInterface::class));
-dump($container->get(App\PersonInterface::class));
-dump($container->get(App\PersonInterface::class));
-
-
-dump($container->make(\App\Foo::class));
-dump($container->make(\App\Foo::class));
-dump($container->make(\App\Foo::class));
-dump($container->make(\App\Foo::class));
-*/
-
-
-$container->bind('foo', function () {
-
-    return new \App\Foo(new \App\Bar());
-});
-
-dump($container->get('foo'));
-
-
-$container->instance(\App\Person::class, new \App\Person());
-// $container->bind(\App\Person::class, \App\Person::class);
-
-dump($container->get(\App\Person::class));
-
-// $container->instance(\Jan\Component\DI\Contracts\ContainerInterface::class, new \Jan\Component\DI\Container());
-$container->call(\App\Controllers\HomeController::class, ['slug' => 'article-1', 'id' => 1], 'index');
-
-$container->call(function (Request $request, Response $response) {
-
-    dump($request, $response);
-    echo 'Привет!';
-});
-dd($container);
+$work->run();

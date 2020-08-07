@@ -35,7 +35,7 @@ class HomeController
    {
        // dump($this->container);
        // dump($slug, $id);
-       dump($this->container);
+       // dump($this->container);
        dump(__METHOD__);
    }
 
