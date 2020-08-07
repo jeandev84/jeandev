@@ -23,8 +23,8 @@ require_once __DIR__.'/../src/Autoload/Autoloader.php';
 
 $autoloader = Autoloader::load(__DIR__.'/../');
 
-$autoloader->addNamespace('Jan\\', __DIR__ . '/../src');
-$autoloader->addNamespace('App\\', __DIR__.'/../app');
+$autoloader->addNamespace('Jan\\', 'src/');
+$autoloader->addNamespace('App\\', '/app/');
 
 $autoloader->register();
 

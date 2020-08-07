@@ -23,13 +23,18 @@ class Autoloader
 
      /**
       * @param string $root
-      * @return Autoloader
+      * @return static|false
      */
      public static function load(string $root)
      {
-          static::$root = $root;
+         if (! is_dir($root))
+         {
+             return false;
+         }
 
-          return new static();
+         static::$root = $root;
+
+         return new static();
      }
 
 
@@ -40,11 +45,7 @@ class Autoloader
      */
      public function addNamespace($namespace, $rootDir)
      {
-         if (is_dir($rootDir))
-         {
-             $this->namespaceMap[$namespace] = rtrim($rootDir, '\\/');
-         }
-
+         $this->namespaceMap[$namespace] = trim($rootDir, '\\/');
          return $this;
      }
 
@@ -73,9 +74,7 @@ class Autoloader
 
              if(! empty($this->namespaceMap[$namespace]))
              {
-                 $filePath = $this->namespaceMap[$namespace] . '/' . implode('/', $pathParts) . '.php';
-
-                 require_once $filePath;
+                 require_once $this->generateFilename($namespace, $pathParts);
 
                  return true;
              }
@@ -91,5 +90,16 @@ class Autoloader
      public function getMappedNamespaces()
      {
          return $this->namespaceMap;
+     }
+
+
+    /**
+     * @param $namespace
+     * @param $pathParts
+     * @return string
+     */
+     protected function generateFilename($namespace, $pathParts)
+     {
+         return static::$root . '/' . $this->namespaceMap[$namespace] . '/' . implode('/', $pathParts) . '.php';
      }
 }
